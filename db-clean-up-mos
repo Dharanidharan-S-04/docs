@@ -1,0 +1,152 @@
+Clean Kafka Queues      (Need to learn)
+
+mosip_resident
+truncate table resident.otp_transaction;
+truncate table resident.resident_transaction;
+truncate table resident.resident_grievance_ticket;
+truncate table resident.resident_session;
+truncate table resident.resident_user_actions;
+
+mosip_regprc
+truncate table regprc.registration_transaction CASCADE; 
+truncate table regprc.registration CASCADE;
+truncate table regprc.registration_list;
+truncate table regprc.reg_verification;
+truncate table regprc.anonymous_profile;
+truncate table  regprc.additional_info_request;
+truncate table  regprc.abis_request CASCADE;
+truncate table regprc.abis_application;
+
+
+mosip_print
+truncate table print.print_transaction;
+
+
+mosip_prereg
+truncate table prereg.anonymous_profile;
+truncate table prereg.applicant_demographic CASCADE;
+truncate table prereg.applicant_demographic_consumed CASCADE;
+truncate table prereg.applications;
+truncate table prereg.batch_job_instance CASCADE;
+truncate table prereg.intf_processed_prereg_list;
+truncate table prereg.otp_transaction;
+truncate table prereg.processed_prereg_list;
+truncate table prereg.reg_appointment;
+
+
+mosip_pms
+truncate table pms.otp_transaction;
+
+
+mosip_master
+truncate table master.batch_job_instance cascade;
+
+
+mosip_kernel
+truncate table kernel.otp_transaction;
+truncate table kernel.uin_assigned;
+truncate table kernel.vid_assigned;
+update kernel.prid set prid_status = 'AVAILABLE';
+update kernel.uin set uin_status = 'UNUSED';
+
+
+mosip_idrepo
+truncate table idrepo.credential_request_status;
+truncate table idrepo.channel_info;
+truncate table idrepo.uin cascade;
+truncate table idrepo.uin_auth_lock;
+truncate table idrepo.uin_biometric_draft;
+truncate table idrepo.uin_biometric_h;
+truncate table idrepo.uin_document_draft;
+truncate table idrepo.uin_document_h;
+truncate table idrepo.uin_draft;
+truncate table idrepo.uin_h;
+truncate table idrepo.anonymous_profile;
+truncate table idrepo.handle;
+truncate table idrepo.identity_update_count_tracker;
+
+
+
+
+mosip_idmap
+truncate table idmap.vid;
+truncate table idmap.vid_seed;
+truncate table idmap.vid_seq;
+
+
+mosip_ida
+truncate table ida.anonymous_profile;
+truncate table ida.auth_transaction;
+truncate table ida.batch_job_instance cascade;     
+truncate table ida.credential_event_store;
+truncate table ida.hotlist_cache;
+truncate table ida.identity_cache;
+truncate table ida.kyc_token_store;
+truncate table ida.otp_transaction;
+truncate table ida.uin_auth_lock;
+truncate table ida.uin_hash_salt;
+truncate table ida.data_encrypt_keystore;
+
+mosip_esignet
+truncate table esignet.consent_detail;
+truncate table esignet.consent_history;
+
+mosip_credential
+truncate table credential.batch_job_instance cascade;
+truncate table credential.credential_transaction;
+
+mosip_audit
+truncate table audit.app_audit_log;
+
+clear ABIS Cache 
+
+Clean mnt/Landing path in Group1 pod
+	cd /mnt/landing/
+	rm -rf *.zip
+	ls
+or 
+
+in Server /srv/nfs/mosip/dst1201/regproc-regproc-group1-pvc-5b838b1c-5558-459e-96d7-af3e4cbc8b29/
+
+find  -maxdepth 10000 -mindepth 1 -type f -name "*.zip" -delete
+ls -1 | wc -l
+find  -mindepth 2 -mtime +5 -type f -name "*.zip" -print0 | xargs -0 echo rm
+
+
+
+Delete Objects from Minio
+mc rm --recursive --force ~/data/packet-manager/
+mc rm --recursive --force ~/data/idrepo/
+mc rm --recursive --force ~/data/mpolicy-default-abis/
+mc rm --recursive --force ~/data/mpolicy-default-adjudication/
+mc rm --recursive --force ~/data/mpolicy-default-auth/
+mc rm --recursive --force ~/data/mpolicy-default-euin/
+mc rm --recursive --force ~/data/mpolicy-default-resident/
+mc rm --recursive --force ~/data/prereg/
+
+
+Clear all cache from Redis Cache
+	redis-cli FLUSHALL
+	redis-cli MONITOR
+	redis-cli MONITOR |grep GET or SET
+
+	idrepository
+	maprtner-default-abis
+	maprtner-default-adjudication
+	maprtner-default-auth
+	maprtner-default-euin
+	maprtner-default-resident
+	packet-manager
+	prereg
+	
+
+abis clearing
+
+ curl http://172.16.47.67:8080/T5CloudService/1.0/getStatus     -> to check license count under   "Slaves" : {"Matchers" : [ {
+
+  
+
+
+Restart pods from regproc, idrepo, ida, biosdk, prereg, kernel, keymanager, packetmanager
+
+
