@@ -1,0 +1,1914 @@
+Link: -----> https://tfmos.atlassian.net/wiki/spaces/devops/pages/102105091/Mosip+Environment+Deployment+on+On-prem+AWS+TF-hardware
+
+INSTALL UBUNTU WSL FROM MICROSOFT STORE
+
+ON WSL :
+
+COPY PEM KEY FROM LOCAL TO WSL
+
+ sudo chmod 400 <pemkey name> --> only single permission to file
+ do passwordless authentication between the hosts 
+
+Install Ansible
+
+ sudo apt update
+ sudo apt install software-properties-common
+ sudo add-apt-reposisudo apt upgrade
+ story --yes --update ppa:ansible/ansible
+ sudo apt install -y ansible
+
+Install rkev1.3.10
+ Kubernetes cluster provisioning with Rancher's RKE command - DevOpsSchool.com     or   Release Release v1.3.10 · rancher/rke 
+
+ sudo apt install wget -y
+ wget https://github.com/rancher/rke/releases/download/v1.3.10/rke_linux-amd64
+ chmod 755 rke_linux-amd64
+ mv rke_linux-amd64 rke
+ echo $PATH
+ sudo mv rke /usr/sbin
+
+Install helm
+
+ curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
+ sudo chmod 700 get_helm.sh
+ sudo ./get_helm.sh
+ helm version --client
+
+Install kubectl
+
+ curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+ curl -LO "https://dl.k8s.io/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl.sha256"
+ echo "$(cat kubectl.sha256)  kubectl" | sha256sum --check --------this should give output as kubectl: OK
+ sudo install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+ chmod +x kubectl
+ mkdir -p ~/.local/bin
+ mv ./kubectl ~/.local/bin/kubectl
+ kubectl version --client
+
+Install ISTIO on WSL
+
+------>don't install istio now... install after rancher export
+
+ refer:  Release Istio 1.15.0 · istio/istio    or  Getting started with Istio on Kubernetes 
+
+ wget https://github.com/istio/istio/releases/download/1.15.0/istio-1.15.0-linux-amd64.tar.gz
+ tar -xvzf istio-1.15.0-linux-amd64.tar.gz
+ cd istio-1.15.0
+ export PATH=$PWD/bin:$PATH
+istioctl install --set profile=demo
+
+ This will install the Istio 1.15.0 demo profile with ["Istio core" "Istiod" "Ingress gateways" "Egress gateways"] components into the cluster. Proceed? (y/N): y
+
+ kubectl get pods --all-namespaces  --> verify isto pods are up and running
+
+------>dont install istio now... install after rancher export
+
+ CLONE THE REQUIRED 3 REPOSITORIES WITH V1.2.0.1-B3 TAG
+
+ git clone -b v1.2.0.1 https://github.com/mosip/k8s-infra.git
+ git clone -b v1.2.0.1 https://github.com/mosip/mosip-infra.git
+ git clone -b v1.2.0.1 https://github.com/mosip/reporting.git
+skip wireguard instance creation and steps for setup as we are using VPN
+
+------> continue from here
+
+LAUNCH 2 INSTANCES FOR RANCHER NODES --> t2.large
+ open all the ports in security grup which is mention in ports.yml file (in k8s-infra repo)
+ k8s-infra/rancher/on-prem/ports.yml
+
+Copy id_rsa.pub contents from WSL to Both Rancher Nodes authorized keys fil
+
+then edit Hosts.ini file likewise:
+
+[cluster]
+node1 ansible_host=10.2.20.18 ansible_user=root ansible_ssh_private_key_file=/home/minhaj/.ssh/id_rsa
+node2 ansible_host=10.2.20.20 ansible_user=root ansible_ssh_private_key_file=/home/minhaj/.ssh/id_rsa
+
+
+
+ON WSL
+
+ cd k8s-infra/rancher/on-prem
+ cp hosts.ini.sample hosts.ini     --->(make a copy of host.ini.sample file)
+ Edit Host.ini files ---> with perticular users(root / ubuntu), ips of hosts and path of pemkey
+
+((((  
+ssh-copy-id mosipuser@10.3.1.111
+scp /home/anvitha/.ssh/id_rsa.pub mosipuser@10.3.1.111
+scp /home/anvitha/.ssh/id_rsa.pub mosipuser@10.3.1.111:~/.ssh/authortized_keys
+))))
+
+ ansible-playbook -i hosts.ini ports.yaml
+
+ ansible-playbook -i hosts.ini docker.yaml   ---> if got error for docker installation (open docker.yml and remove wiregaurd host just keep cluster because we already have docker in wiregaurd)
+
+run rke Config for the perticular no. of nodes 
+
+ ls
+
+[+] Cluster Level SSH Private Key Path [~/.ssh/id_rsa]: /home/anvitha/.ssh/id_rsa
+[+] Number of Hosts [1]: 2
+[+] SSH Address of host (1) [none]: 10.2.20.18
+[+] SSH Port of host (1) [22]: 22
+[+] SSH Private Key Path of host (10.2.20.18) [none]: /home/anvitha/.ssh/id_rsa
+[+] SSH User of host (10.2.20.18) [ubuntu]: root
+[+] Is host (10.2.20.18) a Control Plane host (y/n)? [y]: y
+[+] Is host (10.2.20.18) a Worker host (y/n)? [n]: y
+[+] Is host (10.2.20.18) an etcd host (y/n)? [n]: y
+[+] Override Hostname of host (10.2.20.18) [none]: Node1
+[+] Internal IP of host (10.2.20.18) [none]: 10.2.20.18
+[+] Docker socket path on host (10.2.20.18) [/var/run/docker.sock]:
+[+] SSH Address of host (2) [none]: 10.2.20.20
+[+] SSH Port of host (2) [22]: 22
+[+] SSH Private Key Path of host (10.2.20.20) [none]: /home/minhaj/.ssh/id_rsa
+[+] SSH User of host (10.2.20.20) [ubuntu]: root
+[+] Is host (10.2.20.20) a Control Plane host (y/n)? [y]: y
+[+] Is host (10.2.20.20) a Worker host (y/n)? [n]: y
+[+] Is host (10.2.20.20) an etcd host (y/n)? [n]: y
+[+] Override Hostname of host (10.2.20.20) [none]: Node2
+[+] Internal IP of host (10.2.20.20) [none]: 10.2.20.20
+[+] Docker socket path on host (10.2.20.20) [/var/run/docker.sock]:
+[+] Network Plugin Type (flannel, calico, weave, canal, aci) [canal]:
+[+] Authentication Strategy [x509]:
+[+] Authorization Mode (rbac, none) [rbac]:
+[+] Kubernetes Docker image [rancher/hyperkube:v1.22.9-rancher1]:
+[+] Cluster domain [cluster.local]:
+[+] Service Cluster IP Range [10.43.0.0/16]:
+[+] Enable PodSecurityPolicy [n]:
+[+] Cluster Network CIDR [10.42.0.0/16]:
+[+] Cluster DNS Service IP [10.43.0.10]:
+[+] Add addon manifest URLs or YAML files [no]:
+
+cluster.yml is created after the config is complete
+
+vi cluster.yml ---> Remove the default Ingress install by editing :
+
+ ingress:
+   provider: none
+
+ and give cluster name "<any name>" -->(M_Rancher)
+
+rke up --ignore-docker-version
+
+[ if you encounter error like this "FATA[0252] Failed to get job complete status for job rke-network-plugin-deploy-job in namespace kube-system"
+  then simply run the command "rke remove --ignore-docker-version" and again run "rke up --ignore-docker-version" ]
+
+After successfull creation of cluster follow the below steps:
+
+ cp kube_config_cluster.yml $HOME/.kube/onprem_Rancher_config           <give file name as per your choice for eg : onprem_Rancher_config>
+ chmod 400 $HOME/.kube/onprem_Rancher_config
+ sudo cp  $HOME/.kube/onprem_Rancher_config  $HOME/.kube/config
+ export KUBECONFIG="$HOME/.kube/onprem_Rancher_config"
+
+ kubectl get nodes----> this will list the nodes of Rancher
+
+INSTALL INGRESS CONTROLLER  (WSL)
+
+ helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx 
+ helm repo update
+
+helm install ingress-nginx ingress-nginx/ingress-nginx --namespace ingress-nginx --version 4.0.18 --create-namespace -f ingress-nginx.values.yaml
+
+((((cd ~/k8s-infra/rancher/on-prem
+helm install ingress-nginx ingress-nginx/ingress-nginx \
+  --namespace ingress-nginx \
+  --version 4.0.18 \
+  --create-namespace \
+  -f ingress-nginx.values.yaml
+))))
+
+SETUP NGINX REVERSE PROXY
+
+CREATE 1 INSTANCE FOR RANCHER NGINX --> t2.medium -----> (we already created this)
+
+ON RANCHER NGINX INSTANCE PERFORM THESE STEPS
+
+ (open the https http port in security group)
+
+INSTALL PYTHON-3
+
+ sudo apt update
+ sudo apt install software-properties-common -y
+ sudo add-apt-repository ppa:deadsnakes/ppa
+ sudo apt update
+ sudo apt install python3.8 -y
+ python3 --version
+
+SSL CERTIFICATES WITH LETSENCRYPT
+
+ sudo apt install letsencrypt -y
+ sudo apt install certbot python3-certbot-nginx -y
+
+ON AWS CONSOLE
+
+ROUTE 53 SETTINGS
+
+ Route53--> hosted zones --> idencode.link --> create record
+
+ name: onprem1.idencode.link
+ value:  private ip of Nginx instance
+ CREATE RECORD
+
+ name: rancher.onprem1.idencode.link
+ value:  private ip of Nginx instance
+ CREATE RECORD
+
+ name: keycloak.onprem1.idencode.link
+ value:  private ip of Nginx instance
+ CREATE RECORD
+
+ON RANCHER NGINX INSTANCE
+
+ Generate certificates for your domain name {EXAMPLE: onprem1.idencode.link}
+           sudo certbot certonly --agree-tos --manual --preferred-challenges=dns -d *.sandbox.xyz.net -d sandbox.xyz.net
+
+ modify the above command with your domain name (as shown below)
+           sudo certbot certonly --agree-tos --manual --preferred-challenges=dns -d *.training.idencode.link -d .idencode.link
+
+ run command provide (email id(mosip@gmail.com) , yes, yes)
+
+ create TXT RECORD --> {ON ROUTE 53 AWS CONSOLE}
+ _acme-challenge.onprem1.idencode.link
+ value:  as output shown on terminal
+
+Now go to this url to check the value has been updated for all the locations
+
+url: https://www.whatsmydns.net/ or dnscheker
+
+paste the url - _acme-challenge.onprem1.idencode.link and select record type as TXT and search... 
+verify if the value has been updated on all the locations
+
+and only after verification of values then press enter on the terminal
+
+if the step is passing successfully you will see the following message 
+{
+Waiting for verification...
+ Cleaning up challenges
+
+ IMPORTANT NOTES:
+
+Congratulations! Your certificate and chain have been saved at:
+/etc/letsencrypt/live/techno.idencode.link/fullchain.pem
+Your key file has been saved at:
+/etc/letsencrypt/live/techno.idencode.link/privkey.pem
+Your cert will expire on 2023-04-24. To obtain a new or tweaked
+version of this certificate in the future, simply run certbot
+again. To non-interactively renew all of your certificates, run
+"certbot renew"
+
+If you like Certbot, please consider supporting our work by:
+
+Donating to ISRG / Let's Encrypt:   Donate 
+Donating to EFF:                    Support EFF's Work on Let's Encrypt 
+
+WE WILL SEE THE SUCCESS MESSAGE AS ABOVE
+
+ 
+
+host -t TXT _acme-challenge.onprem1.idencode.link      <edit domain name accordingly>
+}
+
+NGINX INSTALLATION ON RANCHAR NGINX INSTANCE 
+
+ git clone -b v1.2.0.1 https://github.com/mosip/k8s-infra.git : Kubernetes infrastructure to deploy MOSIP modules. 
+ cd k8s-infra/rancher/on-prem/nginx/
+ sudo ./install.sh
+
+ =====>
+ The following internal ip will have to be DNS-mapped to rancher.xyz.net and iam.xyz.net.
+ Give the internal interface ip of this node here. Run ip a to get all the interface addresses (without any whitespaces) : 172.31.15.120  --> ip of nginx server (rancher)
+ =====>
+ Give path for SSL Certificate for rancher.xyz.net (without any whitespaces) : /etc/letsencrypt/live/training.idencode.link/fullchain.pem
+ =====>
+ Give path for SSL Certificate Key for rancher.xyz.net (without any whitespaces) :/etc/letsencrypt/live/training.idencode.link/privkey.pem
+ =====>
+ Give list of ips of all nodes in the rancher cluster (without any whitespaces, comma seperated) : 172.31.92.246,172.31.95.138
+ =====>
+ Give nodeport of the ingresscontroller of rancher cluster (without any whitespaces) (default is 30080) :
+ Reading package lists... Done
+ Building dependency tree
+ Reading state information... Done
+ nginx is already the newest version (1.18.0-0ubuntu1.4).
+ 0 upgraded, 0 newly installed, 0 to remove and 13 not upgraded.
+ Nginx Installation succesful
+
+ sudo systemctl status nginx   (verify nginx status)
+
+INSTALL RANCHER ON WSL USING HELM
+
+go to WSL
+
+ cd k8s-infra/rancher/rancher-ui
+ sudo vi rancher-values.yaml
+ update hostname from Route 53 records (example: rancher.technokt.idencode.link)
+
+ helm repo add rancher-latest https://releases.rancher.com/server-charts/latest
+ helm repo update
+ helm install rancher rancher-latest/rancher \
+   --namespace cattle-system \
+   --create-namespace \
+   -f rancher-values.yaml
+
+
+((((helm install rancher rancher-latest/rancher \
+  --namespace cattle-system \
+  --create-namespace \
+  --version 2.7.5 \
+  -f rancher-values.yaml))))
+
+[ check whether ingress-nginx ns is up and pods inside are up and running ]
+
+ kubectl get all -n cattle-system  (verify the pods and replicaset got generated)
+
+GO TO RANCHER URL:  https://rancher.onprem1.idencode.link
+ login as admin admin
+ keep copy of rancher demo password for further logins: xo6VfB7dX7RYYxjQ
+
+INSTALL PREREQUISITES FOR LONGHORN ON WSL
+
+cd k8s-infra/longhorn
+ ./pre_install.sh
+
+GO TO RANCHER URL: https://rancher.technokt.idencode.link
+ --> apps --> Longhorn (103.1.0+up1.4.3)  --> Install
+ --> next --> under edit options --> Longhorn storage class setting set replicas as (2)
+ --> under edit YAML option -->
+
+ line no. 31 :   guaranteedEngineManagerCPU: 5
+ line no. 32 :   guaranteedReplicaManagerCPU: 5
+
+ INSTALL
+
+KEYCLOAK SETUP
+
+ cd k8s-infra/rancher/keycloak/
+ sudo vi values.yaml
+
+ edit hostname : keycloak.technokt2.idencode.link
+
+./install.sh keycloak.technokt2.idencode.link  --> run file with keycloak host name
+
+[ if this command gives error that cannot access config.yml then go to .kube directory and check owner of the config file 
+by running command 'ls -lrta' and change owner from root to minhaj .... sudo chown minhaj:minhaj ./config.yml 
+
+ To add mosip repo run this command: helm repo add mosip https://mosip.github.io/mosip-helm]
+
+	YOU WILL GET THIS OUTPUT :
+	** Please be patient while the chart is being deployed **
+
+		Keycloak can be accessed through the following DNS name from within your cluster:
+
+			keycloak.keycloak.svc.cluster.local (port 80)
+
+		To access Keycloak from outside the cluster execute the following commands:
+
+		1. Get the Keycloak URL and associate its hostname to your cluster external IP:
+
+		   export CLUSTER_IP=$(minikube ip) # On Minikube. Use: `kubectl cluster-info` on others K8s clusters
+		   echo "Keycloak URL: <http://keycloak.techno.idencode.link/auth">
+		   echo "$CLUSTER_IP  keycloak.techno.idencode.link" | sudo tee -a /etc/hosts
+
+		2. Access Keycloak using the obtained URL.
+		3. Access the Administration Console using the following credentials:
+
+		  echo Username: admin
+		  echo Password: $(kubectl get secret --namespace keycloak keycloak -o jsonpath="{.data.admin-password}" | base64 --decode)
+
+ 
+first run this command 
+((on wsl))
+1. kubectl cluster-info
+2. export CLUSTER_IP=$10.3.1.113    → Ip of nginx node
+3. echo "Keycloak URL: http://keycloak.training.idencode.link/auth"
+4. echo "$CLUSTER_IP  keycloak.training.idencode.link" | sudo tee -a /etc/hosts
+5. sudo vi /etc/hosts   --> cross check the domain is mapped to ip or not and crosscheck the IP 
+6. kubectl get all -n keycloak
+
+
+(((((go to rancher ---> enter to keycloak ns ---> in statefulset ---> replace image names with below ones
+
+mosipid/mosip-artemis-keycloak:1.2.0.1
+
+technoforte2023/keycloak-postgresql:dev)))))
+ 
+
+
+add the postgres SQL port 5432 to rancher node security group --> now we will able to see the volume on Longhorn UI
+
+access https://keycloak.technokt.idencode.link/auth      --> on browser
+ administration console--> user: admin
+			   password: go to rancher-->secrates-->keycloak and copy password and login    
+                           password : UPx4jICy2L
+
+RANCHER AND KEYCLOAK INTEGRATION
+
+ Ref: Configure Keycloak (SAML) | Rancher 
+ Ref: Rancher v2.X KeyCloak Authentication Backend Configuration 
+
+KEYCLOAK CONFIGURATION
+
+Create a new client
+
+ Client ID: https://rancher.training.idencode.link/v1-saml/keycloak/saml/metadata          -->{replace your host}
+ Client Protocol: saml
+ Root URL: Leave empty
+ SAVE
+
+ Name: rancher
+ Enabled: ON
+ Login Theme: keycloak
+ Sign Documents: ON
+ Sign Assertions: ON
+ Encrypt Assertions: OFF
+ Client Signature Reguired: OFF
+ Force Post Binding: OFF
+ Front Channel Logout: OFF
+ Force Name ID Format: OFF
+ Name ID Format: username
+ Valid Redirect URLs: https://rancher.training.idencode.link/v1-saml/keycloak/saml/acs         -->{replace your host}
+ IDP Initiated SSO URL Name: IdPSSOName
+
+ SAVE
+
+CLICK ON MAPPERS-->CREATE
+
+MAPPERS FOR RANCHER CLIENT
+
+1.
+
+ Protocol: saml
+ Name: username
+ Mapper Type: User Property
+ Property: username
+ Friendly Name: username
+ SAML Attribute Name: username
+ SAML Attribute NameFormat: Basic
+ SAVE
+
+2. 
+
+ Protocol: saml
+ Name: groups
+ Mapper Type: Group list
+ Group attribute name: member
+ Friendly Name: Leave empty
+ SAML Attribute Name: Basic
+ Single Group Attribute: ON
+ Full group path: OFF
+ SAVE
+
+In Mappers only click on
+ 
+ADD BUILTIN --> select all --> ADD SELECTED
+
+SAML Descriptior XML file
+ https://keycloak.training.idencode.link/auth/realms/master/protocol/saml/descriptor       --> {replace your keycloak host in link and run in the browser,
+  
+this will open a page which contains SAML code }
+
+GENERATE OPEN SSL CERTIFICATE
+ run below commad in local system (through gitbash ,cmd etc)
+
+ openssl req -x509 -sha256 -nodes -days 365 -newkey rsa:2048 -keyout myservice.key -out myservice.cert
+
+[ give country : IN , state: KAR, City: BLR , Organization: tf unit: tf name: tf email:<your email> and press enter, this will create myservice.cert and myservice.key 
+files in the directory from where you run gitbash ]
+
+GO TO RANCHER:
+Ref: k8s-infra/rancher at main · mosip/k8s-infra 
+more resource---> rancher--->  auth provider--> keycloak(SAML) --> follow the document 
+
+ Display Name Field: givenName
+ User Name Field: uid  or email (not any email id but just word email)
+ UID Field: username
+ Groups Field: member
+ Entity ID Field:	
+ Rancher API Host: https://rancher.onprem1.idencode.link
+
+ PROVIDE PRIVATE KEY GENERATED IN OPEN SSL CERTIFICATE (select the contents from file and select the myservice.key file which was generated)
+ PROVIDE CERTIFICATE GENERATED IN OPEN SSL CERTIFICATE (select the contents from file and select the myservice.cert file which was generated)
+ PROVIDE SAML DESCRIPTIOR XML FILE OUTPUT (on the webpage of SAML Descriptior XML file, press ctrl+a and ctrl+c to copy all and paste in the dialog box)
+
+ ENABLE
+
+After successfull Indegration of Keycloak and Rancher you should be able to login to keycloak through Rancher URL (this will open the webpage of rancher in which you are
+logged in through keycloak)
+
+MOSIP CLUSTER CREATION
+
+ CREATE 6 INSTANCES FOR MOSIP CLUSTER NODES --> t2.2xlarge with volume 128 GB
+ CREATE 1 INSTANCE FOR MOSIP NGINX --> t2.medium  add ports (61616 ,5432, http https)
+
+ Copy id_rsa.pub from WSL to all Mosip Nodes and Nginx
+ and open ports from ports.yml for Mosip Nodes
+
+ cd k8s-infra/mosip/on-prem
+
+ cp hosts.ini.sample hosts.ini
+ Edit hosts.ini file in mosip with particular ips
+
+your hosts.ini file should look like this:
+[
+ #[wireguard]
+#wireguard-admin ansible_host=<external ip> ansible_user=root ansible_ssh_private_key_file=<pvt .pem file>
+
+# <Cluster name>
+[cluster]
+node1 ansible_host=10.2.1.34 ansible_user=mosipuser ansible_ssh_private_key_file=/home/anvitha/.ssh/id_rsa
+node2 ansible_host=10.2.1.35 ansible_user=mosipuser ansible_ssh_private_key_file=~/.ssh/id_rsa
+node3 ansible_host=10.2.1.36 ansible_user=mosipuser ansible_ssh_private_key_file=~/.ssh/id_rsa
+node4 ansible_host=10.2.1.37 ansible_user=mosipuser ansible_ssh_private_key_file=~/.ssh/id_rsa
+node5 ansible_host=10.2.1.38 ansible_user=mosipuser ansible_ssh_private_key_file=~/.ssh/id_rsa
+node6 ansible_host=10.2.1.39 ansible_user=mosipuser ansible_ssh_private_key_file=~/.ssh/id_rsa
+
+
+[nginx]
+node-nginx ansible_host=10.2.1.33 ansible_user=mosipuser ansible_ssh_private_key_file=~/.ssh/id_rsa
+
+((((
+ssh-copy-id mosipuser@10.3.1.111
+scp /home/anvitha/.ssh/id_rsa.pub mosipuser@10.3.1.111
+scp /home/anvitha/.ssh/id_rsa.pub mosipuser@10.3.1.111:~/.ssh/authortized_keys
+
+))))
+												    ]
+and dont forget to add the public key from the WSL to all the 4 nodes by going to the .ssh folder and running the command 'ssh-copy-id mosipuser@10.2.1.74' for other 
+3 nodes as well.
+
+ ansible-playbook -i hosts.ini env-check.yaml     ---> To Perform Environment check on all the cluster nodes
+
+ ansible-playbook -i hosts.ini ports.yaml         ---> to open ports in firewall settings
+
+ vi docker.yaml  ---> remove wireguard from hosts
+ ansible-playbook -i hosts.ini docker.yaml       --->Install docker on all nodes.
+
+CREATE CLUSTER CONFIG FILE:
+ controlplane, etcd, worker: Specify controlplane, etc on at least three nodes. All nodes may be worker.
+
+rke config
+ 
+[+] Cluster Level SSH Private Key Path [~/.ssh/id_rsa]: /home/anvitha/.ssh/id_rsa
+[+] Number of Hosts [1]: 6
+[+] SSH Address of host (1) [none]: 10.2.20.23
+[+] SSH Port of host (1) [22]: 22
+[+] SSH Private Key Path of host (10.2.20.23) [none]: 
+[+] SSH User of host (10.2.20.23) [ubuntu]: mosipuer
+[+] Is host (10.2.20.23) a Control Plane host (y/n)? [y]: y
+[+] Is host (10.2.20.23) a Worker host (y/n)? [n]: y
+[+] Is host (10.2.20.23) an etcd host (y/n)? [n]: y
+[+] Override Hostname of host (10.2.20.23) [none]: Node1
+[+] Internal IP of host (10.2.20.23) [none]: 10.2.20.23
+[+] Docker socket path on host (10.2.20.23) [/var/run/docker.sock]:
+[+] SSH Address of host (2) [none]: 10.2.20.24
+[+] SSH Port of host (2) [22]: 22
+[+] SSH Private Key Path of host (10.2.20.24) [none]: /home/minhaj/.ssh/id_rsa
+[+] SSH User of host (10.2.20.24) [ubuntu]: root
+[+] Is host (10.2.20.24) a Control Plane host (y/n)? [y]: y
+[+] Is host (10.2.20.24) a Worker host (y/n)? [n]: y
+[+] Is host (10.2.20.24) an etcd host (y/n)? [n]: y
+[+] Override Hostname of host (10.2.20.24) [none]: Node2
+[+] Internal IP of host (10.2.20.24) [none]: 10.2.20.24
+[+] Docker socket path on host (10.2.20.24) [/var/run/docker.sock]:
+[+] SSH Address of host (3) [none]: 10.2.20.25
+[+] SSH Port of host (3) [22]: 22
+[+] SSH Private Key Path of host (10.2.20.25) [none]: /home/minhaj/.ssh/id_rsa
+[+] SSH User of host (10.2.20.25) [ubuntu]: root
+[+] Is host (10.2.20.25) a Control Plane host (y/n)? [y]: y
+[+] Is host (10.2.20.25) a Worker host (y/n)? [n]: y
+[+] Is host (10.2.20.25) an etcd host (y/n)? [n]: y
+[+] Override Hostname of host (10.2.20.25) [none]: Node3
+[+] Internal IP of host (10.2.20.25) [none]: 10.2.20.25
+[+] Docker socket path on host (10.2.20.25) [/var/run/docker.sock]:
+[+] SSH Address of host (4) [none]: 10.2.20.26
+[+] SSH Port of host (4) [22]: 22
+[+] SSH Private Key Path of host (10.2.20.26) [none]: /home/minhaj/.ssh/id_rsa
+[+] SSH User of host (10.2.20.26) [ubuntu]: root
+[+] Is host (10.2.20.26) a Control Plane host (y/n)? [y
+[+] Is host (10.2.20.26) a Worker host (y/n)? [n]: y
+[+] Is host (10.2.20.26) an etcd host (y/n)? [n]: y
+[+] Override Hostname of host (10.2.20.26) [none]: Node4
+[+] Internal IP of host (10.2.20.26) [none]: 10.2.20.26
+[+] Docker socket path on host (10.2.20.26) [/var/run/docker.sock]:
+[+] SSH Address of host (5) [none]: 10.2.20.27
+[+] SSH Port of host (5) [22]: 22
+[+] SSH Private Key Path of host (10.2.20.27) [none]: /home/minhaj/.ssh/id_rsa
+[+] SSH User of host (10.2.20.27) [ubuntu]: root
+[+] Is host (10.2.20.27) a Control Plane host (y/n)? [y]: n
+[+] Is host (10.2.20.27) a Worker host (y/n)? [n]: y
+[+] Is host (10.2.20.27) an etcd host (y/n)? [n]: y
+[+] Override Hostname of host (10.2.20.27) [none]: Node5
+[+] Internal IP of host (10.2.20.27) [none]: 10.2.20.27
+[+] Docker socket path on host (10.2.20.27) [/var/run/docker.sock]:
+[+] SSH Address of host (6) [none]: 10.2.20.28
+[+] SSH Port of host (6) [22]: 22
+[+] SSH Private Key Path of host (10.2.20.28) [none]: /home/minhaj/.ssh/id_rsa
+[+] SSH User of host (10.2.20.28) [ubuntu]: root
+[+] Is host (10.2.20.28) a Control Plane host (y/n)? y
+[+] Is host (10.2.20.28) a Worker host (y/n)? [n]: y
+[+] Is host (10.2.20.28) an etcd host (y/n)? [n]: y
+[+] Override Hostname of host (10.2.20.28) [none]: Node6
+[+] Internal IP of host (10.2.20.28) [none]: 10.2.20.28
+[+] Docker socket path on host (10.2.20.28) [/var/run/docker.sock]:
+[+] Network Plugin Type (flannel, calico, weave, canal, aci) [canal]:
+[+] Authentication Strategy [x509]:
+[+] Authorization Mode (rbac, none) [rbac]:
+[+] Kubernetes Docker image [rancher/hyperkube:v1.22.9-rancher1]:
+[+] Cluster domain [cluster.local]:
+[+] Service Cluster IP Range [10.43.0.0/16]:
+[+] Enable PodSecurityPolicy [n]:
+[+] Cluster Network CIDR [10.42.0.0/16]:
+[+] Cluster DNS Service IP [10.43.0.10]:
+[+] Add addon manifest URLs or YAML files [no]:
+
+ AS MENTION ABOVE MENTION y for 3 nodes and n for 3 nodes of mosip cluster for control plane host option
+
+ rke config
+
+ Remove the default Ingress install by editing cluster.yaml:
+
+ ingress:
+   provider: none
+
+ADD CLUSTER NAME IN MOSIP'S cluster.yml:
+  cluster_name: M_Mosip    --> name as per choice
+
+Bring up the cluster:
+ rke up(if u get error then give "rke remove" then again run "rke up")
+
+[ if you encounter error like this "FATA[0252] Failed to get job complete status for job rke-network-plugin-deploy-job in namespace kube-system"
+  then simply run the command "rke remove --ignore-docker-version" and again run "rke up --ignore-docker-version" ]
+
+ cp kube_config_cluster.yml $HOME/.kube/onprem2_mosip_config
+ chmod 400 $HOME/.kube/onprem2_mosip_config
+ sudo cp  $HOME/.kube/onprem2_mosip_config  $HOME/.kube/config
+ export KUBECONFIG="$HOME/.kube/onprem2_mosip_config"
+
+ kubectl get nodes
+
+GLOBAL CONFIGMAPS SETUPS
+
+refer for the domain name format:-->
+ https://github.com/mosip/k8s-infra/blob/main/mosip/on-prem/requirements.md 
+
+[ GO TO THE AWS ROUTE-53 AND IN THAT GO TO HOSTED ZONE AND THERE CLICK ON CREATE RECORD ]
+
+DNS requirements
+ The following DNS mappings will be required.
+ create unique domain name record in route 53 with ip of mosip-nginx instance  --> (choose diff domain from RANCHER AND KEYCLOAK created previously)
+
+ installation-domain     :  onprem1v3.technoforte.co.in                     --> private ip of mosip nginx node
+ mosip-api-host          :  api.onprem1v3.technoforte.co.in               --> private ip of mosip nginx node
+ mosip-api-internal-host :  api-internal.onprem1v3.technoforte.co.in      --> private ip of mosip nginx node
+ mosip-prereg-host       :  prereg.onprem1v3.technoforte.co.in      --> CNAME record --> value = api.onprem1v3.technoforte.co.in  
+ mosip-activemq-host     :  activemq.onprem1v3.technoforte.co.in    --> CNAME record --> value = api-internal.onprem1v3.technoforte.co.in
+ mosip-kibana-host       :  kibana.onprem1v3.technoforte.co.in      --> CNAME record --> value = api-internal.onprem1v3.technoforte.co.in
+ mosip-regclient-host    :  regclient.onprem1v3.technoforte.co.in   --> CNAME record --> value = api-internal.onprem1v3.technoforte.co.in
+ mosip-admin-host        :  admin.onprem1v3.technoforte.co.in       --> CNAME record --> value = api-internal.onprem1v3.technoforte.co.in
+ mosip-minio-host        :  minio.onprem1v3.technoforte.co.in       --> CNAME record --> value = api-internal.onprem1v3.technoforte.co.in
+ mosip-kafka-host        :  kafka.onprem1v3.technoforte.co.in       --> CNAME record --> value = api-internal.onprem1v3.technoforte.co.in
+ mosip-iam-external-host :  iam.onprem1v3.technoforte.co.in         --> CNAME record --> value = api-internal.onprem1v3.technoforte.co.in
+ mosip-postgres-host     :  postgres.onprem1v3.technoforte.co.in    --> CNAME record --> value = api-internal.onprem1v3.technoforte.co.in
+ mosip-pmp-host          :  pmp.onprem1v3.technoforte.co.in         --> CNAME record --> value = api-internal.onprem1v3.technoforte.co.in
+ mosip-onboarder-host    :  onboarder.onprem1v3.technoforte.co.in   --> CNAME record --> value = api-internal.onprem1v3.technoforte.co.in
+ mosip-signup-host       :  signup.onprem1v3.technoforte.co.in      --> CNAME record --> value = api-internal.onprem1v3.technoforte.co.in
+ mosip-resident-host     :  resident.onprem1v3.technoforte.co.in    --> CNAME record --> value = api.onprem1v3.technoforte.co.in
+ mosip-esignet-host      :  esignet.onprem1v3.technoforte.co.in --> CNAME record --> value = api.onprem1v3.technoforte.co.in
+ mosip-smtp-host         :  smtp.onprem1v3.technoforte.co.in        --> CNAME record --> value = api-internal.onprem1v3.technoforte.co.in
+ mosip-healthservices-host: healthservices.onprem1v3.technoforte.co.in --> CNAME record --> value = api.onprem1v3.technoforte.co.in
+
+ cd k8s-infra/mosip/
+ cp global_configmap.yaml.sample global_configmap.yaml
+ sudo vi global_configmap.yaml
+
+Update the domain names in global_configmap.yaml and run
+
+ apiVersion: v1
+ kind: ConfigMap
+ metadata:
+   name: global
+   namespace: default
+ data:
+   installation-name: kt-mos
+   installation-domain: onprem1v3.kt-mos.co.in
+   mosip-version: v1.2.0.1                   ---->(verify version)
+   mosip-api-host: api.onprem1v3.technoforte.co.in
+   mosip-api-internal-host: api-internal.onprem1v3.technoforte.co.in
+   mosip-prereg-host: prereg.onprem1v3.technoforte.co.in
+   mosip-activemq-host: activemq.onprem1v3.technoforte.co.in
+   mosip-kibana-host: kibana.onprem1v3.technoforte.co.in
+   mosip-admin-host: admin.onprem1v3.technoforte.co.in
+   mosip-regclient-host: regclient.onprem1v3.technoforte.co.in
+   mosip-minio-host: minio.onprem1v3.technoforte.co.in
+   mosip-kafka-host: kafka.onprem1v3.technoforte.co.in
+   mosip-iam-external-host: iam.onprem1v3.technoforte.co.in
+   mosip-postgres-host: postgres.onprem1v3.technoforte.co.in
+   mosip-pmp-host: pmp.onprem1v3.technoforte.co.in
+   mosip-onboarder-host: onboarder.onprem1v3.technoforte.co.in
+   mosip-resident-host: resident.onprem1v3.technoforte.co.in
+   mosip-compliance-host: compliance.onprem1v3.technoforte.co.in
+   mosip-esignet-host: esignet.onprem1v3.technoforte.co.in
+   mosip-smtp-host: smtp.onprem1v3.technoforte.co.in
+   mosip-signup-host: signup.mosipkt2.idencode.link
+   mosip-healthservices-host: healthservices.mosipkt2.idencode.link
+   is_glowroot_env: absent
+
+ kubectl apply -f global_configmap.yaml
+ kubectl get cm global
+
+REGISTER MOSIP CLUSTER WITH RANCHER
+
+ --->Login as admin in Rancher console
+ --->Select Import Existing for cluster addition.
+ --->Select the Generic as cluster type to add.
+ --->Fill the Cluster Name field with unique cluster name and select Create.
+ --->You will get the kubectl commands to be executed in the Mosip cluster (WSL) [run the genereated commands in your WSL
+and this will bring up your cluster on rancher ]
+
+ In rancher go to clusters wait for cluster to get into active state
+
+INSTALL LONGHORN PERSISTENCE STORAGE :
+
+INSTALL PREREQUISITES FOR LONGHORN (WSL)
+
+ cd k8s-infra/longhorn
+ ./pre_install.sh
+
+INSTALL LONGHORN FROM RANCHER DASHBOARD:
+ open rancher dashboard --> Mosip cluster --> cluster tools --> longhorn (103.1.1+up1.4.4) --> install
+ --> next --> under edit options --> Longhorn storage class setting set replicas as (2)
+ --> under edit YAML option edit the below mentioned keys value as 5 -->
+
+ guaranteedEngineManagerCPU: 5
+ guaranteedReplicaManagerCPU: 5
+
+ INSTALL
+
+SETUP ISTIO FOR SERVICE DISCOVERY AND INGRESS  {make sure istio is pre installed in WSL [steps are at the start of Document]}
+
+ cd k8s-infra/mosip/on-prem/istio/chart/istio-addons
+ vi values.yaml
+
+EDIT THE HOSTS AS SHOWN BELOW:
+ internalHost: api-internal.mosipkt.idencode.link
+ publicHost: api.mosipkt.idencode.link
+
+[NOTE: BEFORE RUNNING ./INSTALL.SH, INSTALL THE ISTIO FROM THE STARTING STEPS WHICH YOU SKIPPED THAT WILL INSTALL ISTIO-SYSTEM AND ISTIO-OPERATOR NAMESPACES]
+
+ cd k8s-infra/mosip/on-prem/istio
+ ./install.sh
+ kubectl get svc -n istio-system
+
+ON MOSIP NGINX NODE:
+
+NGINX REVERSE PROXY SETUP FOR MOSIP CLUSTER  
+
+INSTALL ANSIBLE
+
+ sudo apt update
+ sudo apt upgrade -y
+ sudo apt install software-properties-common
+ sudo add-apt-repository --yes --update ppa:ansible/ansible
+ sudo apt install -y ansible
+
+INSTALL PYTHON 3
+ sudo apt update
+ sudo apt install software-properties-common
+ sudo add-apt-repository ppa:deadsnakes/ppa
+ sudo apt update
+ sudo apt install python3.8
+ python3 --version
+
+CLONE K8S-INFRA REPOSITORY ON MOSIP NGINX SERVER
+
+ git clone -b v1.2.0.1 https://github.com/mosip/k8s-infra.git               : Kubernetes infrastructure to deploy MOSIP modules. 
+
+SSL CERTIFICATES WITH LETSENCRYPT
+
+ sudo apt install letsencrypt -y
+ sudo apt install certbot python3-certbot-nginx -y
+
+Generate certificates for your domain name {EXAMPLE: technoforte.idencode.link}
+ sudo certbot certonly --agree-tos --manual --preferred-challenges=dns -d *.sandbox.xyz.net -d sandbox.xyz.net
+
+ modify the above command with your domain name (as shown below)
+ sudo certbot certonly --agree-tos --manual --preferred-challenges=dns -d *.kt-mos.idencode.link -d kt-mos.idencode.link
+
+ run command provide (email id , yes, yes)
+
+ create TXT RECORD --> {ON ROUTE 53 AWS CONSOLE}
+ _acme-challenge.technoforte.idencode.link
+ value:  as output shown on cmd
+
+ GO TO URL --> DNS Propagation Checker - Global DNS Checker Tool 
+ copy _acme-challenge.technoforte.idencode.link record name and paste in above link --> select TXT and click on search all sholud be green ticked 
+
+ (wait fro few minutes and then click to continue)
+
+ Press Enter to Continue
+
+ Waiting for verification...
+ Cleaning up challenges
+
+ IMPORTANT NOTES:
+
+Congratulations! Your certificate and chain have been saved at:
+/etc/letsencrypt/live/technoforte.idencode.link/fullchain.pem
+Your key file has been saved at:
+/etc/letsencrypt/live/technoforte.idencode.link/privkey.pem
+Your cert will expire on 2023-03-15. To obtain a new or tweaked
+version of this certificate in the future, simply run certbot
+again. To non-interactively renew all of your certificates, run
+"certbot renew"
+
+If you like Certbot, please consider supporting our work by:
+
+Donating to ISRG / Let's Encrypt:   Donate 
+Donating to EFF:                    Support EFF's Work on Let's Encrypt 
+
+WE WILL SEE THE SUCCESS MESSAGE AS ABOVE
+
+ host -t TXT _acme-challenge.kt-mos.idencode.link      <edit domain name accordingly>
+
+
+NGINX INSTALLATION ON MOSIP NGINX INSTANCE 
+
+ cd k8s-infra/mosip/on-prem/nginx/
+ sudo ./install.sh
+
+=====>
+The following internal ip will have to be DNS-mapped to all internal domains from you global_configmap.yaml. Ex: api-internal.sandbox.xyz.net, iam.sandbox.xyz.net, etc.
+Give the internal interface ip of this node here. Run ip a to get all the interface addresses (without any whitespaces) : 10.2.1.73 (private IP of ngnx)
+=====>
+This nginx's public ip will have to be DNS-mapped to all public domains from you global_configmap.yaml. Ex: api.sandbox.xyz.net, prereg.sandbox.xyz.net, etc.
+The above mentioned nginx's public ip might be different from this nginx machine's public interface ip, if you have provisioned public ip seperately that might be forwarding traffic to this interface ip.
+Give the public interface ip of this node here. Run ip a to get all the interfaces, In case not exposing api's to public give private ip only. : 10.2.1.73 (private IP of ngnx)
+=====>
+Give list of (comma seperated) publicly exposing domain names (without any whitespaces). Ex: api.mosipkt.idencode.link, prereg.mosipkt.idencode.link, resident.mosipkt.idencode.link, idp.sandbox.xyz.net etc : api.kt-mos.idencode.link, prereg.kt-mos.idencode.link, resident.kt-mos.idencode.link, esignet.kt-mos.idencode.link, healthservices.kt-mos.idencode.link
+=====>
+Give path for SSL Certificate (fullchain.pem) for sandbox.xyz.net (without any whitespaces) : Ex: /etc//letsencrypt/live/sandbox.xyz.net/fullchain.pem/etc/letsencrypt/live/kt-mos.idencode.link/fullchain.pem
+=====>
+Give path for SSL Certificate Key (privkey.pem) for sandbox.xyz.net (without any whitespaces): Ex: /etc/letsencrypt/live/sandbox.xyz.net/privkey.pem : /etc/letsencrypt/live/kt-mos.idencode.link/privkey.pem
+=====>
+Give list of (comma seperated) ips of all nodes in the mosip cluster (without any whitespaces) : 10.2.1.164,10.2.1.165,10.2.1.166,10.2.1.167,10.2.1.38,10.2.1.39
+=====>
+Give nodeport of http port of the mosip cluster public ingressgateway (without any whitespaces) (default is 30080) :
+=====>
+Give nodeport of http port of the mosip cluster internal ingressgateway (without any whitespaces) (default is 31080) :
+=====>
+Give nodeport of postgres port of the mosip cluster internal ingressgateway (without any whitespaces) (default is 31432) :
+=====>
+Give nodeport of activemq port of the mosip cluster internal ingressgateway (without any whitespaces) (default is 31616) :
+Reading package lists... Done
+Building dependency tree
+Reading state information... Done
+nginx is already the newest version (1.18.0-0ubuntu1.4).
+nginx set to manually installed.
+0 upgraded, 0 newly installed, 0 to remove and 0 not upgraded.
+Nginx installed succesfully.
+
+sudo systemctl status nginx   (verify nginx status)
+
+INSTALL HTTPBIN (WSL)
+
+ cd k8s-infra/utils/httpbin
+ ./install.sh
+
+ curl https://api.kt-mos.idencode.link/httpbin/get?show_env=true           ---{CHANGE COMMAND AS PER YOUR DOMAIN}
+ curl https://api-internal.kt-mos.idencode.link/httpbin/get?show_env=true  ---{CHANGE COMMAND AS PER YOUR DOMAIN}
+
+INSTALL MONITORING THROUGH RANCHER DASHBOARD ON MOSIP CLUSTER
+
+ Rancher --> Mosip cluster --> Apps --> Monitoring (103.0.0+up45.31.1) --> Install --> Next (with default settings) --> 
+  Edit yaml (line No. 556) -->ingressNginx ENABLED (make it): false --> Install
+ VERIFY THE MONITORING is present on rancher dashboard after installation complete [ goto cattle-monitoring-system nasmespace and check for pods there ]
+
+INSTALLATION OF EXTERNAL SERVICES (WSL)
+
+ Install all the external services as per sequence mention in Install-all.sh file present on path : mosip-infra/deployment/v3/external/all
+
+ 1.POSTGRES: (13 completed and 1 running pods)
+     cd mosip-infra/deployment/v3/external/postgres/chart/istio-addons  --> edit postgres domin as per mention in configmaps in values.yaml file
+     cd mosip-infra/deployment/v3/external/postgres
+     ./install.sh <config file path of mosip cluster>    --> {example: /home/minhaj/.kube/mosipkt_config} /home/anvitha/.kube/onprem5_mosip_config
+
+   INITIALIZE DB:
+     ./init_db.sh <config file path of mosip cluster>
+
+[ IF THIS GIVES AN ERROR THEN, vi init_db.sh and comment the lines 
+	  #echo Removing any existing installation
+          #helm -n $NS delete postgres-init 
+and then run the script ]
+
+[ REGISTER YOUR CLUSTER ON PGADMIN4 ---> GOTO PGADMIN APP AND RIGHT CLICK ON SERVERS AND CLICK ON REGISTER--> GIVE ANY NAME---> 
+  CONNECTIONS-->HOSTNAME/ADDRESS: API-INTERNAL.KT-MOS.IDENCODE.LINK----> PASSWORD: GOTO RANCHER, UNDER POSTGRES NAMESPACE
+  GO TO STORAGE AND GO TO SECRET GOTO POSTGRES/POSTGRESQL AND COPY AND PASTE THE PASSWORD ]
+
+   NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+
+ 2.IAM: (keycloak: 3 pods)
+     cd mosip-infra/deployment/v3/external/iam/chart/istio-addons   --> edit keycloakExternalHost domin as per mention in configmaps in values.yaml file
+     cd mosip-infra/deployment/v3/external/iam
+     ./install.sh <path of kubeconfig file for mosip cluster>    --> {example: /home/shiv/.kube/onprem_mosip_config}
+
+   KEYCLOAK INIT:
+     ./keycloak_init.sh <config file path of mosip cluster>
+
+Provide 'SMTP host' for keycloak :
+smtp.gmail.com
+
+Provide 'SMTP port' for keycloak : 465
+
+Provide 'From email address' for keycloak SMTP :
+mosipqa@gmail.com
+
+Provide Would you like to enable 'starttls' configuration for SMTP ? (false/true) : [ Default: false ] :
+
+Provide Would you like to enable "AUTHENTICATION" configuration for SMTP ? (true/false) : [ Default: true ] :
+
+Provide Would you like to enable "SSL" fro SMTP ? (true/false) : [ Default: true ] :
+
+Provide Provide SMTP login Username :
+mosipqa@gmail.com
+
+Provide Provide SMTP login Password : ogchzjcpjduvzuvz
+
+
+[ THIS GIVES AN ERROR THAT CONFIGMAP keycloak-host IS NOT PRESENT, IF YOU HAVE ANY EXISTING OTHER RANCHER CLUSTER THEN GO TO THAT RANCHER AND UNDER KEYCLOAK NAMESPACE
+  GO TO STORAGE AND CONFIGMAPS THEN GO TO keycloak-host AND CLICK ON 3 DOTS IN TOP RIGHT CORNER AND CLICK ON EDIT YAML AND THEN COPY THE CONTENTS, THEN COME BACK TO YOUR
+  CURRENT RANCHER AND GO TO THE CONFIGMAPS UNDER KEYCLOAK AND CLICK ON CREATE AND CLICK ON EDIT AS YAML AND PASTE THE COPIED CONTENT AND EDIT THE URLS ACCORDINGLY ]
+[ IF KEYCLOAK LANDING PAGE IS NOT ACCESSIBLE AFTER INSTALLATION OF ALL THE MOSIP INTERNAL AND EXTERNAL MODULES, THEN CHECK FOR THE GATEWAYS AND VIRTUALSERVICES UNDER
+  ISTIO TAB UNDER KEYCLOAK NAMESPACE AND IF THEY ARE NOT PRESENT, THEN COPY THEM FROM OTHER DEPLOYMENTS AS YAML FORMAT AND CREATE IN THIS DEPLOYMENT ]
+
+3. SOFTHSM: (2 pods)
+  cd mosip-infra/deployment/v3/external/hsm/softhsm/
+  ./install.sh <config file path of mosip cluster>           --> {example: /home/shiv/.kube/onprem_mosip_config}
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+4. MINIO: (1 pod running)
+  cd mosip-infra/deployment/v3/external/object-store/minio/chart/istio-addons  --> edit minio domin as per mention in configmaps in values.yaml file
+  cd mosip-infra/deployment/v3/external/object-store/minio
+  ./install.sh <config file path of mosip cluster>           --> {example: /home/shiv/.kube/onprem_mosip_config}
+
+CREATE SECRETS FOR CONFIG SERVER:
+  cd mosip-infra/deployment/v3/external/object-store/
+  ./cred.sh <config file path of mosip cluster>
+
+Plesae select the type of object-store to be used:
+1: for minio native using helm charts
+2: for s3 object store
+Please choose the correct option as mentioned above(1/2) 1
+Please provide pretext value :  <Empty>      
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+5. CLAMAV: (1 pod running)
+  cd mosip-infra/deployment/v3/external/antivirus/clamav/
+  ./install.sh <config file path of mosip cluster>           --> {example: /home/shiv/.kube/onprem_mosip_config}
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+6. ACTIVEMQ: (2 pods, 1 will be 2/2 and 1 will be 1/2)
+  cd mosip-infra/deployment/v3/external/activemq
+  ./install.sh <config file path of mosip cluster>           --> {example: /home/shiv/.kube/onprem_mosip_config}
+
+NOTE: 1 pod will be in Running state. 1/2
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+7. KAFKA: (11 pods)
+  cd mosip-infra/deployment/v3/external/kafka/chart/istio-addons/   --> edit kafka domin as per mention in configmaps in values.yaml file
+  cd mosip-infra/deployment/v3/external/kafka
+  ./install.sh <config file path of mosip cluster>           --> {example: /home/shiv/.kube/onprem_mosip_config}
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+8. MSG-GATEWAY: (0 pods)
+   cd mosip-infra/deployment/v3/external/msg-gateway      
+  ./install.sh <config file path of mosip cluster>           --> {example: /home/shiv/.kube/onprem_mosip_config}
+
+  Would you like to use mock-smtp (Y/N) [ Default: Y ] : Y   --> Enter Y
+
+9. LANDING PAGE: (1 pod)
+  cd mosip-infra/deployment/v3/external/landing-page
+  ./install.sh
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+10. CAPTCHA: (0 pods)
+ Pre-Requisites
+ Create a google recaptcha v2 ("I am not a Robot") from Google Recaptcha Admin. 
+
+GO TO URL: <https://www.google.com/recaptcha/about/>
+
+v3adminconsole -->
+lable: prereg.mosipkt.idencode.link
+reCAPTCHA type: reCAPTCHA v2 --> iam not robot
+Domains : prereg.mosipkt.idencode.link
+SUBMIT
+
+  keep copy of secrete key and site key after generation of Recaptcha
+
+   site key    : 6Lc7InUsAAAAAOzQnvmN9vnFhd12YBds_ggy69Dh
+   secret key : 6Lc7InUsAAAAAFwb6ali_qJ_ZPJjtyQYHR6xHKxl
+
+ 
+
+v3adminconsole -->
+lable: resident.mosipkt.idencode.link
+reCAPTCHA type: reCAPTCHA v2 --> iam not robot
+Domains : resident.mosipkt.idencode.link
+SUBMIT
+
+  keep copy of secrete key and site key after generation of Recaptcha
+
+   site key    : 6LdIInUsAAAAAG2XcVJCFKP29ddpJHsnqz2XpiN_
+   secrate key : 6LdIInUsAAAAAHkV1DfuFOWZ2oQ9ESWV3WcmxkUQ
+
+ 
+
+v3adminconsole -->
+lable: esignet.mosipkt.idencode.link
+reCAPTCHA type: reCAPTCHA v2 --> iam not robot
+Domains : esignet.mosipkt.idencode.link
+SUBMIT
+
+  keep copy of secrete key and site key after generation of Recaptcha
+
+   site key    : 6LdbInUsAAAAAPKQocxFXKmb-ZjW_jWbB3955Abg
+   secrate key : 6LdbInUsAAAAABloNXGmG5BKa5Hv3oD6fPIah4zM
+
+[ Paste the reCAPTCHA site key and secret key for esignet while Esignet deployment ] 
+
+cd mosip-infra/deployment/v3/external/captcha
+    ./install.sh [kubeconfig]
+
+prereg
+site key    : 6LcnxgsqAAAAAO6hvpVaAjfMBVgw-DxLXPCyS687
+   secret key : 6LcnxgsqAAAAALABna--TTHpSjLdpcfBOMVEO7XP
+
+resident
+site key    : 6LcyxgsqAAAAAHH0fJUYRSM_FXZcshumoOqKr6ly
+   secrate key : 6LcyxgsqAAAAADyzLdsa_y-Tzh9JT0J3wC4eGkV0
+
+esignet
+site key    : 6Lc6xgsqAAAAAK0KxAZU6QOvfpiHu8Z5ZccUPqmd
+   secrate key : 6Lc6xgsqAAAAAPqe3nuXdAboEdWJG_7P_kwHql1L
+
+INSTALLATION OF MOSIP SERVICES (WSL)
+
+ Install all the mosip services as per sequence mention in Install-all.sh file present on path : mosip-infra/deployment/v3/mosip/all    {Make sure you install Partner-onboarder at the last}
+
+ 1. CONF-SECRETS: (0 pods)
+  cd mosip-infra/deployment/v3/mosip/conf-secrets
+
+  ./install.sh [kubeconfig]
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+2. CONFIG-SERVER: (1 pod)
+  cd mosip-infra/deployment/v3/mosip/config-server   
+  vi values.yml   {make chnages in git repo}                       
+
+  ---> IN VALUES.YML   edit uri : https://github.com/tf-govstack/mosip-config
+ 	                              edit version: onp_kt in values.yaml  [ if you are deploying again, then create a new branch out of onp_kt and give tht name ]
+  ./install.sh
+
+  Is conf-secrets module installed?(Y/n) Y
+  Is values.yaml for config-server chart set correctly as part of Pre-requisites?(Y/n) Y
+
+[ IF YOU SEE AN ERROR IN POD LOGS IF NOT COMING UP LIKE CONFIG SERVER GLOBAL CONFIG MAPS SIGNUP HOST NOT FOUND, THEN YOU CAN EITHER TAKE THAT PARTICULAR CONFIG MAP 
+  FROM OTHER CLUSTER OR YOU CAN ADD THAT PARTICULAR FIELD IN THE CLUSTER AS FOLLOWING: mosip-signup-host
+										       signup.mosipkt.idencode.link ]
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+3. ARTIFACTORY: (1 pod )
+[ DEPLOY ARTIFACTORY FROM 1.2.0.2 ]
+  cd mosip-infra/deployment/v3/mosip/artifactory
+  ./install.sh
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+4. KEYMANAGER: (2 pods)
+  cd mosip-infra/deployment/v3/mosip/keymanager
+  ./install.sh
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+5. WEBSUB:(2 pods)
+  cd mosip-infra/deployment/v3/mosip/websub
+  ./install.sh
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+6. KERNEL: (9 total)
+  cd mosip-infra/deployment/v3/mosip/kernel
+  ./install.sh
+
+[ after installation is complete, upgrade the following pod images from the deployment yaml file
+	mosipid/kernel-masterdata-service:1.2.1.0
+	mosipid/kernel-syncdata-service:1.2.1.0 ]
+
+[ idgenerator and notifier pods will come up later, proceed with the next step ]
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+7. MASTERDATA-LOADER:(1 pods)
+   cd mosip-infra/deployment/v3/mosip/masterdata-loader     { Stop }
+   ./install.sh
+
+ NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+8. BIOSDK:(1 pods)
+   cd mosip-infra/deployment/v3/mosip/biosdk
+   ./install.sh
+
+ NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+9. PACKETMANAGER:(1 pods)
+   cd mosip-infra/deployment/v3/mosip/packetmanager
+   ./install.sh
+
+ NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+10. DATASHARE:(1 pods)
+  cd mosip-infra/deployment/v3/mosip/datashare
+  ./install.sh
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+11. PREREG:(6 pods)
+  cd mosip-infra/deployment/v3/mosip/prereg
+  ./install.sh
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+12. IDREPO:(total 5 pods- 1 completed 4 running)
+  cd mosip-infra/deployment/v3/mosip/idrepo
+  ./install.sh
+[ after installation is complete, upgrade the following pod images from the deployment yaml file
+	mosipid/credential-request-generator:1.2.1.0
+	mosipid/credential-service:1.2.1.0
+	mosipid/id-repository-credentials-feeder:1.2.1.0
+	mosipid/id-repository-identity-service:1.2.1.0
+	mosipid/id-repository-salt-generator:1.2.1.0
+	mosipid/id-repository-vid-service:1.2.1.0 ]
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+13. PMS:(3 pods)
+  cd mosip-infra/deployment/v3/mosip/pms
+  ./install.sh
+
+[ after installation is complete, upgrade the following pod images from the deployment yaml file
+	mosipid/partner-management-service:1.2.1.0
+	mosipid/policy-management-service:1.2.1.0 ]
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+14. MOCK-ABIS:(1 pods)
+  cd mosip-infra/deployment/v3/mosip/mock-abis
+  ./install.sh
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+15. MOCK-MV:(1 pods)
+  cd mosip-infra/deployment/v3/mosip/mock-mv
+  bash install.sh
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+16. REGPROC:(15 pods)
+  cd mosip-infra/deployment/v3/mosip/regproc
+  ./install.sh
+
+[ landingzone task will fail, ignore it ]
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+17. ADMIN:(4 pods)
+  cd mosip-infra/deployment/v3/mosip/admin
+  ./install.sh
+[ after installation is complete, upgrade the following pod images from the deployment yaml file
+	mosipid/admin-service:1.2.1.0
+	mosipid/hotlist-service:1.2.1.0 ]
+
+[ IF ADMIN SERVICE POD IS NOT COMING UP AND FAILING, THEN YOU CAN GO TO YAML OF DEPLOYMENT UNDER ADMIN NAMESPACE AND EDIT YAML OF ADMIN-SERVICE AND INCREASE THE 
+  FAILURE THRESHOLD OF STARTUP PROBE TO 90, THIS WILL GIVE MORE TIME FOR POD TO COME UP ]
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+18. IDA:(total 4 pods- 1 completed 3 running)
+ cd mosip-infra/deployment/v3/mosip/ida
+ ./install.sh
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+19. PRINT:(1 pods)
+  cd mosip-infra/deployment/v3/mosip/print
+  ./install.sh
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+20. RESIDENT: (2 pods)
+   clone repositories for both resident service and resident-ui
+  resident-service: git clone https://github.com/mosip/resident-services.git -b v1.2.1.0
+  resident-ui: git clone https://github.com/mosip/resident-ui.git -b v0.9.0
+  
+  resident-service: url: https://github.com/mosip/resident-services/tree/v1.2.1.0
+	cd resident-services/deploy/
+	./install.sh
+
+  resident-ui: url: https://github.com/mosip/resident-ui/tree/v0.9.0
+	cd resident-ui/deploy/
+	./install.sh
+
+[ One of resident pod is dependent on artifactory pod, artifactory pod image should be changed from 1.2.0.1 to 1.2.0.2 in the deployment yaml file of artifactory
+  in the rancher ]
+[ for placeholder issue error, you have to first go to config-server ns and go to deployments and there under health tab click on the dropdown and scale the deployment
+  to 0, then click on 3 dots and click on edit yaml option, similarly open the tfgov environment rancher using the link "https://rancher.technoforte.idencode.link"
+ and login using user: admin and pass: xc2cv14Rwg, then open the same deployment yaml file you opened in your environment for config server and search for these two
+ secrets in the yaml file "mosip.resident.request.credential.encryption.key" and "resident.websub.regproc.workflow.complete.secret" by full name of part name, then
+  copy these two entries from the tfgov env to your env yaml file for deployment of config-server:
+	- name: >-
+                SPRING_CLOUD_CONFIG_SERVER_OVERRIDES_MOSIP_RESIDENT_REQUEST_CREDENTIAL_ENCRYPTION_KEY
+              valueFrom:
+                secretKeyRef:
+                  key: mosip-resident-request-credential-encryption-key
+                  name: conf-secrets-various
+        - name: >-
+                SPRING_CLOUD_CONFIG_SERVER_OVERRIDES_RESIDENT_WEBSUB_REGPROC_WORKFLOW_COMPLETE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  key: resident-websub-regproc-workflow-complete-secret
+                  name: conf-secrets-various
+ then save the deployment yaml file and again increase the scale of it from 0 to 1, this will bring up the config-server pod, keep checking for recent events of the
+ pod if it is asking for some more missing secrets then do the same thing or add in the secrets directly from the tfgov environment by going to secrets and going in
+ conf-secrets-various secret and click on 3 dots and click on edit config and then click on add button in the bottom and provide the name and value from the tfgov 
+ environment and save it, once this is up then try restarting the resident pod and similarly check for the recent events of the pods and check if it asking for some
+ missing secrets and if yes then copy from the tfgov environment similarly then the resident pod will also come up. ]
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+21. REGCLIENT: (2 pods)
+  cd mosip-infra/deployment/v3/mosip/regclient
+  ./install.sh
+
+[ REGCLIENT SHOULD BE DEPLOYED FROMa BRANCH V1.2.0.2 IN MOSIP-INFRA REPO LOCALLY AND RUN REGCLIENT MODULE ONLY FROM THAT PARTICULAR BRANCH 
+
+  And make sure this module is installed from ubuntu 20.04 as in 22.04 pod will not come up]
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+22. MOCK-SMTP:(1 pods)
+  cd mosip-infra/deployment/v3/mosip/mock-smtp
+  ./install.sh
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+23. MOSIP-FILE-SERVER: (1 pod)
+  cd mosip-infra/deployment/v3/mosip/mosip-file-server
+  ./install.sh
+
+while deploying mosip-file server need to provide link :
+
+Please Enter MOBILE APP Link publicly accessible APK: <https://api.mosipkt.idencode.link/.well-known>           -->{Edit Domain as per your ENV}
+Please Enter MOBILE APP Link privately accessible APK: <https://api.mosipkt.idencode.link/files/mobileapp>      -->{Edit Domain as per your ENV}
+
+[ this is the output of the script: Get your download url from here
+https://api.mosipkt.idencode.link/.well-known/
+https://api.mosipkt.idencode.link/inji/
+https://api.mosipkt.idencode.link/mosip-certs/
+]
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+24. PARTNER-ONBOARDER: ( 6 pods completed)
+  cd mosip-infra/deployment/v3/mosip/partner-onboarder
+  ./install.sh
+
+[
+Provide onboarder bucketname: onboarder
+Provide onboarder s3 bucket region : press enter
+Provide S3 URL : http://minio.minio:9000
+]
+[
+ If you face an error like jq: command not found, then simply install 'jq' on your wsl by running the following commands:
+	sudo apt-get update
+	sudo apt-get install jq
+]
+[
+ After installation is complete, goto minio.mosipkt.idencode.link then goto the onboarder bucket and check all the generated reports and verify if there are any
+ failed test cases in any of the reports, and if any of the particular report has failed test cases then that particular module should be redeployed by editing the
+  values.yaml file and keeping true option for only the failed module and running the install.sh again ]
+
+NOTE : AFTER COMPLETE INSTALLATION OF SERVICE VERIFY THE PODS ARE UP AND RUNNING IN RANCHER UNDER PARTICULAR NAMESPACE.
+
+SANITY CHECK
+
+ VERIFY IN RANCHER ALL THE PODS ARE UP AND RUNNING UNDER MOSIP CLUSTER
+
+  CHECK THE LOGS FOR:
+  -POSTGRES
+  -MASTERDATA-LOADER
+  -ONBOARDER
+
+  GO TO MAIN DOMAIN / LANDING-PAGE DOMAIN EXAMPLE: http://technoforte.idencode.link    ----> One by one click on every service present
+
+  Below there is host link to access POSTGRES --> Password for the POSTGRES is present in RANCHER --> POSTGRES(Namespace) --> STORAGE --> SECRETS --> postgres-postgres
+
+CREATE USER IN ADMIN KEYCLOAK FOR MOSIP REGISTRATION AUTHENTICATION IN POSTMAN:
+
+[GO TO KEYCLOAK SERVICE FROM THE LANDING PAGE AND LOGIN USING THE CREDENTIALS, USER: admin PASS: Rancher > keycloak ns > secrets > keycloak > copy admin-password ]
+
+KEYCLOAK --> ADMINISTRATION USER --> USERS -->ADD USER
+
+username : 110123 (provide as per choice) --> SAVE
+credentials : Techno@123 --> Temperory --> OFF --> SAVE
+
+ROLE MAPPING:
+	{AUTH, AUTH_PARTNER, CENTRAL_ADMIN, Default, default-roles-mosip,
+	DEVICE_PROVIDER, FTM_PROVIDER, GLOBAL_ADMIN, KEY_MAKER, MASTERDATA_ADMIN
+	MISP, offline_access, ONLINE_VERIFICATION_PARTNER, PARTNER, PARTNER_ADMIN
+	PARTNERMANAGER, PMS_ADMIN, PMS_USER, POLICYMANAGER, REGISTRATION_ADMIN
+	REGISTRATION_OFFICER, REGISTRATION_OPERATOR, REGISTRATION_PROCESSOR
+	REGISTRATION_SUPERVISOR, uma_authorization, ZONAL_ADMIN}
+
+KEYCLOAK --> ADMINISTRATION USER --> USERS -->ADD USER
+
+username : globaladmin (firstname: globaladmin, last name: globaladmin)--> SAVE 
+
+credentials : Techno@123 --> Temperory --> OFF --> SAVE
+
+ROLE MAPPING:
+	[AUTH, AUTH_PARTNER, CENTRAL_ADMIN, Default,
+	GLOBAL_ADMIN, KEY_MAKER, MASTERDATA_ADMIN,
+	offline_access, ONLINE_VERIFICATION_PARTNER,
+	REGISTRATION_ADMIN, REGISTRATION_OFFICER,
+	REGISTRATION_OPERATOR, REGISTRATION_PROCESSOR,
+	REGISTRATION_SUPERVISOR, uma_authorization, ZONAL_ADMIN]
+
+MACHINE ADDITION:
+
+GO TO ENV LANDING PAGE URL :{example: technoforte.idencode.link}
+
+[ TO GET TPM DETAILS, YOU NEED TO RUN A JAR FILE NAMED: tpmutility-0.0.2.jar, OPEN GITBASH IN THE FOLDER WHERE THIS FILE IS STORED AND THEN RUN THE FOLLOWING COMMAND 
+  "java -jar tpmutility-0.0.2.jar", THIS WILL GIVE THE TPM DETAILS. NOTE: JAVA SHOULD BE INSTALLED IN THE GITBASH FOR THIS TO WORK. ]
+
+[ SAVE THE OUTPUT YOU GET FROM THE ABOVE COMMAND IN NOTEPAD++ AND FILL IN THE MACHINE DETAILS AS PER THE BELOW INSTRUCTIONS ]
+
+OPEN ADMIN--> {globaladmin    Techno@123}---> resources--> machines--> create machine--> fill the details from TPM-->
+
+	MACHINE NAME: {from tpm detils}
+	SERIAL NUMBER: 012345
+	MAC ADDRESS: {192.168.122.90    any dummy} 
+	IP ADDRESS: {192.168.122.84    any dummy}
+	VALID DATA: give same date of next year
+	MACHINE SPECIFIC ID: {Resident virtual machine}
+	PUBLIC KEY: {from tpm detils}
+	SIGN KEY: {from tpm detils}
+	ADMINISTRATION ZONE: {North}
+	CENTER NAME: {rural muncipal mansara}
+
+[ AFTER FILLING THE DETAILS, THEN ON MACHINES PAGE ACTIVATE THE NEWLY CREATED MACHINE BY CLICKING ON THE 3 DOTS AND CLICK ON ACTIVATE, THEN GO TO USER ZONE MAPPING
+  AND CLICK ON 3 DOTS AND CLICK ON 'MAP TO CENTER' AND IN 'CENTER NAME' CLICK ON DROP DOWN AND SELECT 'RURAL MUNCIPAL MNASRA' AND CLICK ON SAVE, THEN COME OUT AND
+  CLICK ON 3 DOTS AGAIN AND CLICK ON 'ACTIVATE', THEN SIMILARLY COME TO USER CENTER MAPPING THEN CLICK ON 3 DOTS AND CHECK IF THE USER IS MAPPED TO CENTER, IF ALREADY
+  MAPPED THEN CLICK ON ACTIVATE AND IF NOT THEN FIRST MAP AND THEN ACTIVATE. ]
+
+DEVICE CERTIFICATE GENERATION:
+
+Download CA_CERT_UTILITY.zip
+
+EXTRACT CA_CERT_UTILITY
+
+[ open CA_CERT_UTILITY folder and delete the below mentioned certificates, then run git bash in the same directory and run the create certs script using the command
+  "bash create-certs.sh", this will start the script and give the details as mentioned below and certificates you deleted earlier will be re created ] 
+
+delete intermediate certificate , root certificate , partner certificate.
+
+RUN create-certs --> 
+
+country name (IN)   state (KAR)   city (BLR)   organization name (CA)  organization unit name (CA)  common name (CA)	     
+
+country name (IN)   state (KAR)   city (BLR)   organization name (SUBCA)   organization unit name (SUBCA)  common name (SUBCA)
+
+-----------for partner------------
+country name (IN)   state (KAR)   city (BLR)   organization name (SG1111)   organization unit name (SG1111)  common name (SG1111)
+
+[intermediate certificate , root certificate , partner certificate got generated]
+
+
+mohammed.minhaj@TECHNO-500 MINGW64 /d/CA_CERT_UTILITY/CA_CERT_UTILITY
+ bash create-certs.sh
+==================== Creating CA certificate
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:IN
+State or Province Name (full name) [Some-State]:KAR
+Locality Name (eg, city) []:BLR
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:CA
+Organizational Unit Name (eg, section) []:CA
+Common Name (e.g. server FQDN or YOUR name) []:CA
+Email Address []:mohammed.minhaj@technoforte.co.in
+==================== Creating Intermediate CA certificate
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:IN
+State or Province Name (full name) [Some-State]:KAR
+Locality Name (eg, city) []:BLR
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:SUBCA
+Organizational Unit Name (eg, section) []:SUBCA
+Common Name (e.g. server FQDN or YOUR name) []:SUBCA
+Email Address []:mohammed.minhaj@technoforte.co.in
+
+Please enter the following 'extra' attributes
+to be sent with your certificate request
+A challenge password []:Techno@123
+An optional company name []:tf
+Certificate request self-signature ok
+subject=C = IN, ST = KAR, L = BLR, O = SUBCA, OU = SUBCA, CN = SUBCA, emailAddress = mohammed.minhaj@technoforte.co.in
+IntermediateCA.crt: OK
+==================== Creating Device Provider certificate
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:IN
+State or Province Name (full name) [Some-State]:KAR
+Locality Name (eg, city) []:BLR
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:SG1111
+Organizational Unit Name (eg, section) []:SG1111
+Common Name (e.g. server FQDN or YOUR name) []:SG1111
+Email Address []:mohammed.minhaj@technoforte.co.in
+
+Please enter the following 'extra' attributes
+to be sent with your certificate request
+A challenge password []:Techno@123
+An optional company name []:tf
+Certificate request self-signature ok
+subject=C = IN, ST = KAR, L = BLR, O = SG1111, OU = SG1111, CN = SG1111, emailAddress = mohammed.minhaj@technoforte.co.in
+Partner.crt: OK ]
+
+REGISTER DEVICE ON MOSIP
+
+IMORT FILE TO POSTMAN    {mosip_registration}
+
+Open V3-MOSIP_Registration.postman_collection.json
+V3-MOSIP_Registration.postman_collection.json
+V3-MOSIP_Registration.postman_collection.json
+15 May 2023, 05:06 PM
+STEP 1--> LOGIN TO MOSIP  --> {verify url as your domain}
+
+[ {
+  "id": "string",
+  "version": "string",
+  "requesttime": "2022-04-07T09:24:32.998Z",
+  "metadata": {},
+  "request": {
+    "userName": "110123",
+    "password": "Techno@123",
+    "appId": "partner",
+    "clientId": "mosip-pms-client",
+    "clientSecret": "lxtAA84mRT0si3zC"
+  } 
+  IN THIS ONE YOU HAVE TO ONLY CHANGE THE CLINETSECRET, TO DO THIS GOTO RANCHER --> KEYCLOAK NS --> SECRETS--> mosip_pms_client_secret--> COPY AND PASTE HERE
+   THEN SEND THE REQUEST ]
+
+STEP 2--> PARTNER SELF REGISTRATION
+
+   change emailid [mohammed.minhaj@technoforte.co.in] 
+
+   change organization name [SG1111] 	
+
+   partner id [SG1111]     ----> send
+[ if you face authentication failure in this step then copy the 'token value' from the step 1: Login to MOSIP response body and paste in the environmets--> authtoken-->save.
+	{"response": {
+        "token": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJDVC1xcVZYWnpPN1hLZjRPX1d5RmZRdkdpODc1bTA5a1FHYmp0V28zVWFnIn0.eyJleHAiOjE3MjEwODE2NTIsImlhdCI6MTcyMTA0NTY1MiwianRpIjoiMjQ1MGQ2ZjAtYTllZS00NzRmLTllNDYtZjQ5MjQ5OGQ2NTNjIiwiaXNzIjoiaHR0cHM6Ly9pYW0ubW9zaXBrdC5pZGVuY29kZS5saW5rL2F1dGgvcmVhbG1zL21vc2lwIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6IjEyZTg3MDQyLThlZTQtNGU0MS1iYjZmLWY0NzcyZDI2NjY4NSIsInR5cCI6IkJlYXJlciIsImF6cCI6Im1vc2lwLXBtcy1jbGllbnQiLCJzZXNzaW9uX3N0YXRlIjoiOTY3MWIwYzQtMTAxYy00ZDA0LTg0OWYtOWJiYjViMDcwOGRiIiwiYWNyIjoiMSIsInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJSRUdJU1RSQVRJT05fT0ZGSUNFUiIsImRlZmF1bHQtcm9sZXMtbW9zaXAiLCJSRUdJU1RSQVRJT05fUFJPQ0VTU09SIiwiUkVHSVNUUkFUSU9OX0FETUlOIiwiWk9OQUxfQURNSU4iLCJSRUdJU1RSQVRJT05fU1VQRVJWSVNPUiIsIk1BU1RFUkRBVEFfQURNSU4iLCJGVE1fUFJPVklERVIiLCJQTVNfVVNFUiIsIm9mZmxpbmVfYWNjZXNzIiwiUEFSVE5FUl9BRE1JTiIsInVtYV9hdXRob3JpemF0aW9uIiwiR0xPQkFMX0FETUlOIiwiTUlTUCIsIlBBUlRORVIiLCJLRVlfTUFLRVIiLCJSRUdJU1RSQVRJT05fT1BFUkFUT1IiLCJQQVJUTkVSTUFOQUdFUiIsIkFVVEhfUEFSVE5FUiIsIkRFVklDRV9QUk	9WSURFUiIsIkRlZmF1bHQiLCJDRU5UUkFMX0FETUlOIiwiUE1TX0FETUlOIiwiT05MSU5FX1ZFUklGSUNBVElPTl9QQVJUTkVSIiwiQVVUSCIsIlBPTElDWU1BTkFHRVIiXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6InVwbG9hZF9jZXJ0aWZpY2F0ZSBlbWFpbCBhZGRfb2lkY19jbGllbnQgcHJvZmlsZSBnZXRfY2VydGlmaWNhdGUgdXBkYXRlX29pZGNfY2xpZW50Iiwic2lkIjoiOTY3MWIwYzQtMTAxYy00ZDA0LTg0OWYtOWJiYjViMDcwOGRiIiwiZW1haWxfdmVyaWZpZWQiOmZhbHNlLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiIxMTAxMjMifQ.Cm9CKVqnD4idKhaMB1hoqGYSbK0nVmm49vhfftVuiLKT21sosJ1hJ_RABvMVDPFsGZnGbXcfR3q0RI0GlRVX9LvMx71BWh1TFHPOXacLUW15WQz2KcqlNeTZwBdKzjAircr17d66SXGOQfGqyN2AwC6fNOoIPuh398kAV41KNgDgaz1-4FWvnY2j0KZVjRgxb98l3X4Ci_0Oza3oTgTi8QVX1iCxzpWN0MhNLxqruumHwIq5-YiC7fgS3PGcPeLI3UWtPTuSpuj4l3qLSVLKe2RmdR7zIy28kNts1-m9hHKXfkKtvWf_7Y08Q1t9q9xC3CqKPZj6IwKhpbYLcRe7bA",
+	}
+ If the issue persists then goto cookies which you can find under the send option, and delete the previous cookie and then try ]
+
+STEP 3--> UPLOAD ROOT_CA {verify url as your domain}
+
+  open rootCA cetrificate in notepad++   	
+
+         find and replace  \n --> \\n 	
+
+         find and replace	\r --> empty        
+
+copy the certificate with above modification and paste in UPLOAD ROOT_CA in postman       -----> send
+
+STEP 4--> UPLOAD INTERMEDIATE_CA {verify url as your domain}
+
+         open intermediate CA cetrificate in notepad++        
+
+         find and replace  \n --> \\n      
+
+         find and replace	\r --> empty       
+
+copy the certificate with above modification and paste in UPLOAD INTERMEDIATE_CA in postman       -----> send
+
+STEP 5--> UPLOAD_PARTNER  {verify url as your domain}
+
+         open partner cetrificate in notepad++        
+
+         find and replace  \n --> \\n      
+
+         find and replace	\r --> empty       
+
+copy the certificate with above modification and paste in UPLOAD_PARTNER in postman      partnerid : SG1111       -----> send
+
+STEP 6--> copy 'mosip-signed' certificate created in CA_CERT_UTILITY folder and paste outside of the folder
+	 open mosip-signed in notepad++   remove content from it.
+	 copy the signed certificate generated in response from postman when you ran UPLOAD_PARTNER, copy that and paste it in mosip-signed file
+
+      then find and replace  \\n --> \n     SAVE IT  then     MOVE mosip-signed to  CA_CERT_UTILITY folder
+
+STEP 7--> open [create-device-keystore] with notepad++  
+          copy the file path of CA_CERT_UTILITY folder and paste it in create-device-keystore in commented command   SAVE IT
+[ IT SHOULD LOOK LIKE THIS
+	# Device key
+	echo "==================== Creating Device keys and export to keystore"
+	echo "Note: mosip-signed-Partner.crt is the certificate issued by mosip after successful onboard of device provider"
+	openssl genrsa -out Device.key 4096
+	openssl req -new -key Device.key -out DevicePublicKey.csr
+	openssl x509 -req -extensions usr_cert -extfile ./openssl.cnf -days 30 -in DevicePublicKey.csr -CA mosip-signed.crt -CAkey Partner.key -set_serial 05 -out signed-Device.crt
+	#openssl pkcs12 -export -in D:\CA_CERT_UTILITY\CA_CERT_UTILITY\CA_CERT_UTILITY\signed-Device.crt -inkey 
+	D:\CA_CERT_UTILITY\CA_CERT_UTILITY\CA_CERT_UTILITY\Device.key -out D:\CA_CERT_UTILITY\CA_CERT_UTILITY\CA_CERT_UTILITY\Device.p12 -name "Device" ]
+
+	    RUN create-device-keystore by opening gitbash in the folder where this script is stored and run the command "bash create-device-keystore.sh"
+		
+	    country name [IN]  state [KAR]  locality name [BLR]  organization name [FACE] organization common name [FACE] common name [FACE] 
+
+will get SIGNED-DEVICE certificate in the CA_CERT_UTILITY folder.
+
+
+FOR CREATING DEVICE CERTIFICATE
+
+open cmd at the location :   c/program files/git/usr/bin   
+
+run  the below command :--   openssl pkcs12 -export -in D:/CA_CERT_UTILITY/CA_CERT_UTILITY/CA_CERT_UTILITY/signed-Device.crt -inkey D:/CA_CERT_UTILITY/CA_CERT_UTILITY/CA_CERT_UTILITY/Device.key -out D:/CA_CERT_UTILITY/CA_CERT_UTILITY/CA_CERT_UTILITY/Device.p12 -name "Device"
+
+password: mosip  
+
+verify password: mosip   
+
+Device certificate is generated in CA_CERT_UTILITY folder rename it as Device_mosip   
+
+run  the below command again at same location :--   openssl pkcs12 -export -in D:/CA_CERT_UTILITY/CA_CERT_UTILITY/CA_CERT_UTILITY/signed-Device.crt -inkey D:/CA_CERT_UTILITY/CA_CERT_UTILITY/CA_CERT_UTILITY/Device.key -out D:/CA_CERT_UTILITY/CA_CERT_UTILITY/CA_CERT_UTILITY/Device.p12 -name "Device"
+
+password: mosipface  
+
+verify password: mosipface
+
+DOWNLOAD MOCKMDS
+ open URL : GitHub - mosip/mosip-mock-services at develop 
+ CLICK ON CODE --> DOWNLOAD ZIP
+
+Open mosip-mock-services-develop.zip
+mosip-mock-services-develop.zip
+mosip-mock-services-develop.zip
+15 May 2023, 05:29 PM
+ EXTRACT mosip-mock-services-develop FILE
+
+ OPEN file mosip-mock-services-develop --> MockMDS
+
+ EDIT POM file in Notepad++
+
+REMOVE <gpgArguments> FROM line no. 229 to 232  as the below mention :
+
+			<gpgArguments>
+				<arg>--pinentry-mode</arg>
+				<arg>loopback</arg>
+			</gpgArguments>
+
+ADD after line 228 i.e., inside <configuration> below line need to be added:
+
+			<skip>true</skip>
+
+OPEN CMD in above MockMDS folder
+	In CMD run below mentioned command
+
+[ MAKE SURE YOU ARE USING JAVA - 'jdk-21', IF NOT UPGRADE TO IT AND UPDATE THE PATH USING THE COMMANDS 
+	setx JAVA_HOME "C:\Program Files\Java\jdk-21"
+	setx PATH "%JAVA_HOME%\bin;%PATH%"
+
+THEN VERIFY THE VERSION 'java -version'  ]
+
+
+  THEN RUN THE COMMAND              ' mvn clean install '
+
+NOTE: This will generate Target folder in the MockMds folder
+
+OPEN TARGET FOLDER and EDIT APPLICATION FILE WITH NOTEPAD++
+
+EDIT THE BELOW KEYS VALUES AS (Device and mosipface) As Mentioned below
+
+mosip.mock.sbi.file.face.keys.keystorefilename=/Biometric Devices/Face/Keys/Device.p12
+mosip.mock.sbi.file.face.keys.keyalias=Device
+mosip.mock.sbi.file.face.keys.keystorepwd=mosipface
+
+mosip.mock.sbi.file.face.keys.keystorefilename.ftm=/Biometric Devices/Face/Keys/Device.p12
+mosip.mock.sbi.file.face.keys.keyalias.ftm=Device
+mosip.mock.sbi.file.face.keys.keystorepwd.ftm=mosipface
+
+mosip.mock.sbi.file.finger.slap.keys.keystorefilename=/Biometric Devices/Finger/Slap/Keys/Device.p12
+mosip.mock.sbi.file.finger.slap.keys.keyalias=Device
+mosip.mock.sbi.file.finger.slap.keys.keystorepwd=mosipface
+
+mosip.mock.sbi.file.finger.slap.keys.keystorefilename.ftm=/Biometric Devices/Finger/Slap/Keys/Device.p12
+mosip.mock.sbi.file.finger.slap.keys.keyalias.ftm=Device
+mosip.mock.sbi.file.finger.slap.keys.keystorepwd.ftm=mosipface
+
+mosip.mock.sbi.file.finger.single.keys.keystorefilename=/Biometric Devices/Finger/Single/Keys/Device.p12
+mosip.mock.sbi.file.finger.single.keys.keyalias=Device
+mosip.mock.sbi.file.finger.single.keys.keystorepwd=mosipface
+
+mosip.mock.sbi.file.finger.single.keys.keystorefilename.ftm=/Biometric Devices/Finger/Single/Keys/Device.p12
+mosip.mock.sbi.file.finger.single.keys.keyalias.ftm=Device
+mosip.mock.sbi.file.finger.single.keys.keystorepwd.ftm=mosipface
+
+mosip.mock.sbi.file.iris.double.keys.keystorefilename=/Biometric Devices/Iris/Double/Keys/Device.p12
+mosip.mock.sbi.file.iris.double.keys.keyalias=Device
+mosip.mock.sbi.file.iris.double.keys.keystorepwd=mosipface
+
+mosip.mock.sbi.file.iris.double.keys.keystorefilename.ftm=/Biometric Devices/Iris/Double/Keys/Device.p12
+mosip.mock.sbi.file.iris.double.keys.keyalias.ftm=Device
+mosip.mock.sbi.file.iris.double.keys.keystorepwd.ftm=mosipface
+
+mosip.mock.sbi.file.iris.single.keys.keystorefilename=/Biometric Devices/Iris/Single/Keys/Device.p12
+mosip.mock.sbi.file.iris.single.keys.keyalias=Device
+mosip.mock.sbi.file.iris.single.keys.keystorepwd=mosipface
+
+mosip.mock.sbi.file.iris.single.keys.keystorefilename.ftm=/Biometric Devices/Iris/Single/Keys/Device.p12
+mosip.mock.sbi.file.iris.single.keys.keyalias.ftm=Device
+mosip.mock.sbi.file.iris.single.keys.keystorepwd.ftm=mosipface
+
+EDIT AS PER ENV/DOMAINS
+
+mosip.auth.server.url=https://api-internal.onpremb3.idencode.link/v1/authmanager/authenticate/clientidsecretkey
+
+mosip.auth.clientid=mosip-regproc-client
+mosip.auth.secretkey=BAurcdoUzDbNFyby
+[ search for 'mosip_regproc_client_secret' secret in keycloak namespace and copy that secret and paste in above line ]
+
+mosip.ida.server.url=https://api-internal.onpremb3.idencode.link/idauthentication/v1/internal/getCertificate?applicationId=IDA&referenceId=IDA-FIR
+
+COPY DEVICE CERTIFICATE	(Device.p12) from CA_CERT_UTILITY folder
+
+inside MOCKMDS --> TARGET -->Biometrics devices
+
+-->face -->Keys ---> paste Device certificate
+-->Finger -->Single --> Keys ---> paste Device certificate
+-->Finger -->Slab --> Keys ---> paste Device certificate
+-->Iris --> Single -->Keys ---> paste Device certificate
+-->Iris --> Double -->Keys ---> paste Device certificate
+
+in MOCKMDS --> TARGET  run  run_reg file
+
+PRE-REGISTRATION:
+
+go to url : {verify url as your domain}
+
+-->pre registartion (open pre-registration page)
+-->Email: any (md.minhaj88@gmail.com)
+-->Otp : 111111 (give this otp to login)
+
+fill all demographic details (as per your information) --> upload documents (any dummy pdf documents) --> book appointment --> conformation and print the form (save
+ as pdf).
+
+LAUNCH REG-CLIENT 
+
+[ DOWNLOAD THE REGCLIENT FOR WINDOWS FROM THE REGCLIENT SERVICE FROM THE LANDING PAGE AND EXTRACT THE REG-CLIENT, THEN RUN THE 'run' FILE IN THAT FOLDER.
+  CLICK ON NEW REGISTRATION, THEN EITHER YOU CAN GET THE DEMOGRAPHIC DETAILS WHICH YOU FILLED IN PRE-REG BY GIVING THE APPLICATION NUMBER OR YOU CAN START FRESH
+  BY GIVING THE DETAILS AGAIN THEN AFTER THAT AUTHENTICATE AND SAVE THE APPLICATION, THEN GOTO HOME GOTO PENDING APPROVAL AND SELECT THE PREVIOUSLY CREATED APPLICATION
+  AND APPROVE IT BY AUTHENTICATING, THEN GOTO HOME GOTO APPLICATION UPLOAD--> SELECT THE APPLICATION AND UPLOAD IT, AND TO VERIFY THE STATUS OF IT GOTO ADMIN SERVICE
+  AND LOGIN AND THERE YOU CAN GOTO PACKET STATUS AND GIVE THE APPLICATION NUMBER AND TRACK IF THE APPLICATION HAS PROCESSED THROUGH, FOR A SUCCESSFUL APPLICATION PROCESS
+  IT SHOULD REACH TO THE 'INTERNAL_WORKFLOW_ACTION' STAGE. ]
+
+PUT PRE-REGISTRATION ID --> FETCH DATA
+complete all upadtes--> authenticate and save
+click on home ----> Pending Approval--> approve---> authenticate
+click on home ----> application upload   ----> save to device / upload
+
+VIEW PACKET STATUS: 
+
+go to admin url ----> packet status ---> pre registration id --> search
+
+CHECK STATUS IN DB:
+
+Databases:
+mosip_regprc --> schemas --> regprc --> Tables --> registration_transaction
+
+CREDENTAIL_STORAGE STATUS:
+
+Databases:
+mosip_credential --> schemas --> credentails --> Tables --> credential_transaction
+
+
+
+
+
+
+[ Restart masterdata and syncdata in kernel NS if data sync is failing when you click on new registration ]
+
+[ delete mosipkeys, db and logs from the reg-client folder whenever you restart the regclient after some debugging and changes ]
+
+[ If any of the certificate has a failed request in minio onboarder folder like abis, print, etc then first goto pgadmin and goto mosip_keymgr--> schemas--> keymgr--> 
+ tables--> ca_cert_store --> right click--> scripts--> select scripts--> run and check for "abis" in cert_subject and delete that particular entry and save it (if 
+  abis reports has failed request) and then run the partner onboarder again by editing the values.yaml and keeping true only for the failed requests service ]
+
+
+
+[ If you are facing place holder issue in the logs then,
+	
+	mimoto properties compare files in repos
+ 	
+	mosip/mosip-config -b v1.2.1.0 and tf-govstack/mosip-config -b onp_kt
+
+
+config-server-share configmap in config-server namespace check which branch of the mosip-config it is pointing to ]
+
+[ inji web and verify installation 
+
+  injiweb: https://docs.mosip.io/inji/inji-web/inji-web/version-0.8.1
+	
+ step 1: clone injiweb (https://github.com/mosip/inji-web/tree/v0.8.1) -b v0.8.1
+ step 2: clone mimoto (https://github.com/mosip/mimoto/tree/release-0.12.0) -b v0.12.0
+ step 3: check which repo and branch your mosip config is taken from by going to config-server-share configmap 
+	in config-server namespace, there you can see this (http://config-server.config-server/config/*/default/onp_kt/hazelcast_cache.xml)
+	from this you can make out that the branch is onp_kt of repo mosip-config from account tf-govstack
+ step 4: Compare the 'mimoto-default.properties' and 'mimoto-issuers-config.json' files from tf-govstack/mosip-config branch onp_kt with mosip/mosip-config repo 
+	 from branch 'v0.12.0-INJI' and copy the missing lines from this particular branch to the onp_kt branch which you are using.
+ step 5: Delete mimoto namespace from the cluster and now cd mimoto , cd helm/mimoto , run install.sh, this will create a new pod of mimoto
+ step 6: then cd inji-web/, cd helm/inji-web, vi values.yml and edit the injiweb url and esignet url, then run the install.sh script this will create pod for the same
+ step 7: create CNAME record in route53 for the injiweb url ie, 'injiweb.onpremdev.idencode.link' and give the value as 'api.onpremdev.idencode.link' and similarly add these 
+	 values in k8s-infra/mosip/ and edit global_configmap.yml and add the following line to it 'mosip-injiweb-host: injiweb.onpremdev.idencode.link' and apply the 
+	 configmap using the command 'kubectl apply -f global_configmap.yaml' and finally goto the nginx node of the cluster using command 'ssh mosipuser@10.2.1.**'
+	 and run 'sudo vi /etc/nginx/nginx.conf' then add the url of injiweb to the existing server names like this 
+	(server{
+        	listen 10.2.1.90:443 ssl;
+        	server_name  api.onpremdev.idencode.link prereg.onpremdev.idencode.link resident.onpremdev.idencode.link esignet.onpremdev.idencode.link 
+		healthservices.onpremdev.idencode.link signup.onpremdev.idencode.link injiweb.onpremdev.idencode.link injiverify.onpremdev.idencode.link;)
+ step 8: then you can access the injiweb on the url and if encountering issues then restart the configserver and injiweb pods
+
+ Similarly for injiverify
+
+ step 1: clone the injiverify repo using the command 'git clone https://github.com/mosip/inji-verify.git -b v0.8.1'
+ step 2: cd inji-verify/, cd helm/inji-verify, vi values.yaml then edit the urls for esignet and injiverify and save
+ step 3: similarly create CNAME record in route53 for the injiweb url ie, 'injiverify.onpremdev.idencode.link' and give the value as 'api.onpremdev.idencode.link' and similarly add these 
+	 values in k8s-infra/mosip/ and edit global_configmap.yml and add the following line to it 'mosip-injiverify-host: injiverify.onpremdev.idencode.link' and apply the 
+	 configmap using the command 'kubectl apply -f global_configmap.yaml' and finally goto the nginx node of the cluster using command 'ssh mosipuser@10.2.1.**'
+	 and run 'sudo vi /etc/nginx/nginx.conf' then add the url of injiweb to the existing server names like this 
+	(server{
+        	listen 10.2.1.90:443 ssl;
+        	server_name  api.onpremdev.idencode.link prereg.onpremdev.idencode.link resident.onpremdev.idencode.link esignet.onpremdev.idencode.link 
+		healthservices.onpremdev.idencode.link signup.onpremdev.idencode.link injiweb.onpremdev.idencode.link injiverify.onpremdev.idencode.link;)
+ step 4: then you can run install.sh and this will create a pod the injiverify namespace and after that you can access the url for injiverify
+]
+
+ Inji-certify:
+
+ step 1: Clone the inji-certify repo from the following command : git clone https://github.com/mosip/inji-certify.git -b v0.8.1
+ step 2: cd inji-certify/docker-compose-sunbird --> vi .env --> edit WEB_DID_BASE_URL value to <https://mdminhaj88.github.io/DID-Resolve>
+ step 3: cd inji-certify/ --> ./insall.sh --> select 1 option --> all the services will come up --> can check the status and ports by using 'docker ps -a'
+ step 4: download the postman collection through the url "https://github.com/Sunbird-RC/demo-mosip-rc/blob/main/Demo%20Mosip%20RC.postman_collection.json"
+ step 5: goto postman and import the downloaded the collection, under Identity MS --> Generate DID --> paste this in the request body
+[
+	{
+    	"content": 
+        	[
+           	 {
+              	  "alsoKnownAs": ["did.test@gmail.com.test"],
+              	  "services": [
+  	
+              	  ],
+             	   "method":"web"
+           	 }
+       	 ]
+    
+	}
+]
+   in postman goto environments and change the '{{IDENTITY_BASE_URL}}' variable value to 'http://10.2.1.47:3332', then send the request.
+   From the response body you will get this id '"id": "did:web:mdminhaj88.github.io:DID-resolve:08c587c8-5708-4178-9cc2-d0e82bfa8076",'
+   from this id take '08c587c8-5708-4178-9cc2-d0e82bfa8076' and create a folder in the repository where you hosted your webpage and inside that folder create a file
+   with name 'did.json' and in that file paste the complete response you get from the 'Generate DID' api.
+ step 6: Download 2 postman collections
+	1. Registry_Schema_Request.json
+	2. Credential_Schema_Request.json
+	from the deployment steps page 'https://tfmos.atlassian.net/wiki/spaces/devops/pages/244776963/Sunbird+setup+in+a+E2E+node' point number 5
+ now goto 'Credential Schema MS' api --> Add new schema --> paste the content of the 'Credential_Schema_Request.json' into this api request body --> send
+ now to 'Registry MS' api --> v1 --> schema --> Create new Schema --> paste the content of 'Registry_Schema_Request.json' into this api request body --> send
+ step 7: Download the jar file from the url: 'https://repo1.maven.org/maven2/io/mosip/esignet/sunbirdrc/sunbird-rc-esignet-integration-impl/0.1.0/sunbird-rc-esignet-integration-impl-0.1.0.jar'
+	this should be copied to the 'inji-certify/docker-compose-esignet/loader_path' path, to copy the jar file from downloads to this location run the command
+	from windows powershell from downloads folder 'scp sunbird-rc-esignet-integration-impl-0.1.0.jar mosipuser@10.2.1.47:/home/mosipuser/inji-certify/docker-compose-esignet/loader_path'
+ step 8: cd inji-certify/docker-compose-esignet/config/ and 'vi esignet-default.properties' likewise by changing the urls
+
+	##--------------------sunbird registry authentication related demo configuration-------------------------##
+
+mosip.esignet.authenticator.sunbird-rc.auth-factor.kba.individual-id-field=policyNumber
+mosip.esignet.authenticator.sunbird-rc.auth-factor.kba.field-details={{"id":"policyNumber", "type":"text", "format":""},{"id":"fullName", "type":"text", "format":""},{"id":"dob", "type":"date", "format":"dd/mm/yyyy"}}
+mosip.esignet.authenticator.sunbird-rc.auth-factor.kba.registry-search-url=http://10.2.1.47:8044/api/v1/Insurance/search
+mosip.esignet.authenticator.sunbird-rc.kba.entity-id-field=osid
+
+##-----------------------------VCI related demo configuration---------------------------------------------##
+
+mosip.esignet.vciplugin.sunbird-rc.issue-credential-url=http://10.2.1.47:3000/credentials/issue
+mosip.esignet.vciplugin.sunbird-rc.supported-credential-types=HealthInsuranceCredential,LifeInsuranceCredential,InsuranceCredential
+mosip.esignet.vciplugin.sunbird-rc.credential-type.HealthInsuranceCredential.static-value-map.issuerId=did:web:mdminhaj88.github.io:DID-resolve:08c587c8-5708-4178-9cc2-d0e82bfa8076
+mosip.esignet.vciplugin.sunbird-rc.credential-type.HealthInsuranceCredential.template-url=https://raw.githubusercontent.com/challabeehyv/mimoto-config/main/InsuranceConfig.json
+mosip.esignet.vciplugin.sunbird-rc.credential-type.HealthInsuranceCredential.registry-get-url=http://10.2.1.47:8044/api/v1/Insurance/
+mosip.esignet.vciplugin.sunbird-rc.credential-type.HealthInsuranceCredential.cred-schema-id=did:schema:dc000a57-e889-4347-b6c1-710d1ec8b31a
+mosip.esignet.vciplugin.sunbird-rc.credential-type.HealthInsuranceCredential.cred-schema-version=1.0.0
+mosip.esignet.vciplugin.sunbird-rc.credential-type.HealthInsuranceCredential.registry-search-url=http://10.2.1.47:8044/api/v1/Insurance/search
+
+mosip.esignet.vciplugin.sunbird-rc.credential-type.LifeInsuranceCredential.static-value-map.issuerId=did:web:mdminhaj88.github.io:DID-resolve:08c587c8-5708-4178-9cc2-d0e82bfa8076
+mosip.esignet.vciplugin.sunbird-rc.credential-type.LifeInsuranceCredential.template-url=https://raw.githubusercontent.com/challabeehyv/mimoto-config/main/InsuranceConfig.json
+mosip.esignet.vciplugin.sunbird-rc.credential-type.LifeInsuranceCredential.registry-get-url=http://10.2.1.47:8044/api/v1/Insurance/
+mosip.esignet.vciplugin.sunbird-rc.credential-type.LifeInsuranceCredential.cred-schema-id=did:schema:dc000a57-e889-4347-b6c1-710d1ec8b31a
+mosip.esignet.vciplugin.sunbird-rc.credential-type.LifeInsuranceCredential.cred-schema-version=1.0.0
+mosip.esignet.vciplugin.sunbird-rc.credential-type.LifeInsuranceCredential.registry-search-url=http://10.2.1.47:8044/api/v1/Insurance/search
+
+
+mosip.esignet.vciplugin.sunbird-rc.credential-type.InsuranceCredential.static-value-map.issuerId=did:web:mdminhaj88.github.io:DID-resolve:08c587c8-5708-4178-9cc2-d0e82bfa8076
+mosip.esignet.vciplugin.sunbird-rc.credential-type.InsuranceCredential.template-url=https://raw.githubusercontent.com/challabeehyv/mimoto-config/main/InsuranceConfig.json
+mosip.esignet.vciplugin.sunbird-rc.credential-type.InsuranceCredential.registry-get-url=http://10.2.1.47:8044/api/v1/Insurance/
+mosip.esignet.vciplugin.sunbird-rc.credential-type.InsuranceCredential.cred-schema-id=did:schema:dc000a57-e889-4347-b6c1-710d1ec8b31a
+mosip.esignet.vciplugin.sunbird-rc.credential-type.InsuranceCredential.cred-schema-version=1.0.0
+mosip.esignet.vciplugin.sunbird-rc.credential-type.InsuranceCredential.registry-search-url=http://10.2.1.47:8044/api/v1/Insurance/search
+
+ step 9: cd inji-certify/ --> ./install.sh --> select 2 this time and esignet related services will be installed.
+ step 10: Download the postman collection and environment for sunbird use case from 'https://github.com/mosip/digital-credential-plugins/tree/master/sunbird-rc-esignet-integration-impl/postman-collections'
+	this downloads both the collection and environment variables as well.
+ step 11: From this newly downloaded collection, run Create Client from Create OIDC client API, add redirect uri 'http://10.2.1.47:3001', 
+	add auth-factor 'mosip:idp:acr:knowledge' to the request body.
+the request body should look this way:
+
+{    
+    "requestTime": "{{$isoTimestamp}}",
+    "request": {
+        "clientId": "{{clientId}}",
+        "clientName": "{{$randomAvatarImage}}",
+        "publicKey": {{publicKey_jwk}},
+        "relyingPartyId": "{{relayingPartyId}}",
+        "userClaims": [
+            "name"
+        ],
+        "authContextRefs": [
+            "mosip:idp:acr:knowledge"
+        ],
+        "logoUri": "https://avatars.githubusercontent.com/u/60199888",
+        "redirectUris": [
+             "{{redirectionUrl}}",
+             "io.mosip.residentapp://oauth"
+        ],
+        "grantTypes": [
+            "authorization_code"
+        ],
+        "clientAuthMethods": [
+            "private_key_jwt"
+        ]
+    }
+}	
+	edit the url as per your setup and then send the request, response should give "status": "ACTIVE".
+ step 12: Run the 'Create Insurance Registry' api from 'Sunbird RC Insurance Registry' from 'eSignet with Sunbird RC' and request should look like this
+{
+    "policyNumber": "12345",
+    "policyName": "Start Insurance Gold Premium",
+    "policyExpiresOn": "2033-04-20T20:48:17.684Z",
+    "policyIssuedOn": "2023-04-20T20:48:17.684Z",
+    "fullName": "Minhaj ul haq",
+    "dob": "1993-08-08",
+    "benefits": [
+        "Critical Surgery",
+        "Full body checkup"
+    ],
+    "gender": "Male",
+    "mobile": "0123456489",
+    "email": "minhaj@gmail.com"
+}
+
+verify url and then send request, response body should look like this "status": "SUCCESSFUL",
+ step 13: Run api eSignet with Sunbird RC > KBA > Get CSRF token
+	  Run api eSignet with Sunbird RC > KBA >Authorize / OAuthdetails request V2
+	  Run api eSignet with Sunbird RC > KBA > Authenticate User V2 here in the request body you should paste the base64 encoded value of 
+	'{"fullName":"Minhaj ul haq","dob":"1993-08-08"}' in the challenge part of the request
+ 	body and the above line can be encoded from this url 'https://www.base64encode.org/'. Also change the individual ID from the request body to the policy number
+	value from 'Search Insurance Registry' response body. Verify the url and send request, it should throw "transactionId": "XmFLzbXm7_TI5i5K_V2jZ1cwSC3M4uY6TWShnMlCmXw""
+
+ step 14: Next 'Authorization Code' api , just send the request by verifying the url
+ step 15: Next 'Get Tokens V2' 
+ step 16: Next 'Get Credential' api > goto scripts > pre-request > change <"aud" : pm.environment.get('Url'),> to <"aud" : pm.environment.get('audUrl'),>
