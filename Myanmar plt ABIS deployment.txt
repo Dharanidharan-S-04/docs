@@ -1,0 +1,316 @@
+Myanmar plt ABIS deployment
+
+KB Documentation login:-
+
+https://kb.tech5.tech
+Username : salim.khan@technoforte.co.in
+Password : $@L!m%$#$%^&
+
+ 
+
+#Login to Tech5 Docker repository:-
+docker login -u salim.khan@technoforte.co.in https://repo.tech5-sa.com:8443/
+password- $@L!m%$#$%^&
+
+
+#1 ABIS Backend:-
+Docker Image: repo.tech5-sa.com:8443/abis-be:9.2.0
+Admin Guide: https://kb.tech5.tech/en/identification/t5-abis-be/docker-compose-multinode-9
+ 
+
+#2 T5-BioSDK Service (Server-Side):-
+Docker Image: repo.tech5-sa.com:8443/biosdk:6.3.4.1
+Admin Guide: BioSDK Server Integration
+https://kb.tech5.tech/identification/Mosip/biosdk-server-integration
+ 
+
+#3 T5-BioSDK Library (Windows) v6.3.4:-
+A. Dependencies
+Download URL: https://drive.tech5.tech/s/SNQYNZdfiocMLrM/authenticate/showShare
+Password: 5TNA4npgzT
+
+B. Admin Guide: T5-OmniMatchSDK and BioSDK Windows Integration with MOSIP RegClient | Knowledge Base
+Download URL: T5OmniMatchBioSDK.zip
+Password: 9Kc5cXmQxg
+
+C. Configuration File:
+Download URL: Config File
+Password: GEaPE343q7
+
+#4 Adjudication Client-2.13.2:-
+
+Installation Guide : https://kb.tech5.tech/en/t5-omnimatch-abis/mosip/manual-adjudication-system/2-13-2/installation-guide
+Download URL:https://drive.tech5.tech/s/iBPAFxdrqkYzBN4
+Password: SAn6SpWNzr
+
+
+Licenses
+
+#Online License Token
+License Token:
+
+NISG POC
+
+ABIS : E59B8D22C7D39B561960A2BBB50A3E1AF3D0FB0F638CAE6839439AF4FADD1C4D                                           6100 Records                                                                                                                                   
+BioSDK : 47D2B4C6BEA3068DC5C147580704C44CD4718CCB06500F36A59F5729FA3C77A4                              1 Instance, 2 Clients
+Adjudication : E0BE9DE434158F5B9FAC37451476E024E97DA17557528353FD39992AC7FBBC95                              1 Clients
+
+ 
+
+Validity : End of June 2026
+
+
+
+
+login to 172.16.47.67 ABIS master node 
+
+Install docker 
+
+sudo apt update
+sudo apt install -y ca-certificates curl gnupg lsb-release
+sudo mkdir -p /usr/share/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+$(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+sudo apt install -y docker-ce docker-compose
+sudo usermod -aG docker ${USER}
+
+sudo su
+
+docker login -u salim.khan@technoforte.co.in https://repo.tech5-sa.com:8443/
+password- $@L!m%$#$%^&
+
+Docker image
+docker pull repo.tech5-sa.com:8443/abis-be:9.2.0
+
+
+Install Postgres 
+
+docker run -d \
+  --name abisdb \
+  -e POSTGRES_DB=abis \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=tech123 \
+  -p 5432:5432 \
+  -v postgress-vol:/var/lib/postgresql/data \
+  postgres:17
+
+create dir 
+mkdir /opt/Tech5
+ 
+check the psql 
+psql
+psql -U postgres -h localhost -p 5432 -d abis
+
+
+Goto /opt/Tech5 create a file with name docker-compose.yml and paste the following in it and save the file.
+
+version: '3.1'
+services:
+
+  abismaster01:
+    image: ${ABIS_IMAGE}
+    restart: always
+    user: root
+    network_mode: "${NETWORK_MODE}"
+    environment:
+      LICENSE_TOKEN: ${LICENSE_TOKEN}
+      ABIS_SERVICES: Master
+      NUM_MATCHERS: "-1"
+    volumes:
+      - /opt/Tech5/T5-ABIS:/opt/Tech5/T5-ABIS
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1g"
+        max-file: "100"
+    ports:
+      - ${MASTER_PORT}:8080
+
+  tc:
+    image: ${ABIS_IMAGE}
+    restart: always
+    user: root
+    network_mode: "${NETWORK_MODE}"
+    environment:
+      LICENSE_TOKEN: ${LICENSE_TOKEN}
+      ABIS_SERVICES: TC
+    depends_on:
+      - abismaster01
+    volumes:
+      - /opt/Tech5/T5-ABIS:/opt/Tech5/T5-ABIS
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1g"
+        max-file: "50"
+
+  matcher:
+    image: ${ABIS_IMAGE}
+    restart: always
+    user: root
+    network_mode: "${NETWORK_MODE}"
+    environment:
+      LICENSE_TOKEN: ${LICENSE_TOKEN}
+      ABIS_SERVICES: Matcher
+      MATCHERDB_DRIVER: ${MATCHERDB_DRIVER}
+      MATCHERDB_USERNAME: ${MATCHERDB_USERNAME}
+      MATCHERDB_PASSWORD: ${MATCHERDB_PASSWORD}
+      MATCHERDB_IP: ${MATCHERDB_IP}
+    depends_on:
+      - abismaster01
+    volumes:
+      - /opt/Tech5/T5-ABIS:/opt/Tech5/T5-ABIS
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1g"
+        max-file: "50"
+
+  verifier:
+    image: ${ABIS_IMAGE}
+    restart: always
+    user: root
+    network_mode: "${NETWORK_MODE}"
+    environment:
+      LICENSE_TOKEN: ${LICENSE_TOKEN}
+      ABIS_SERVICES: Verifier
+    depends_on:
+      - abismaster01
+    volumes:
+      - /opt/Tech5/T5-ABIS:/opt/Tech5/T5-ABIS
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1g"
+        max-file: "50"
+
+	
+
+Create a file .env in the same folder as docker-compose.yml and add the following in it and save it.
+
+# Valid License Token
+LICENSE_TOKEN=<Replace your License Token here>    # E59B8D22C7D39B561960A2BBB50A3E1AF3D0FB0F638CAE6839439AF4FADD1C4D
+# Latest ABIS docker image Tag
+TAG=9.2.0
+ABIS_IMAGE=repo.tech5-sa.com:8443/abis-be:9.2.0
+
+# Postgres DB connection string and creadetials
+MATCHERDB_DRIVER=org.postgresql.Driver
+MATCHERDB_USERNAME=postgres
+MATCHERDB_PASSWORD=tech123
+MATCHERDB_IP=jdbc:postgresql://localhost:5432/abis
+
+# ABIS Exposed ports
+MASTER_PORT=8080
+
+# ABIS Home Directory
+ABIS_HOME_DIR=/opt/Tech5/T5-ABIS
+
+# Its possible value will be "host" if you want to use host network
+NETWORK_MODE=host
+
+
+docker create --name temp repo.tech5-sa.com:8443/abis-be:9.2.0
+docker cp temp:/opt/Tech5/T5-ABIS .
+curl http://localhost:8080/T5CloudService/1.0/getStatus
+
+docker-compose up -d
+docker compose logs -f abismaster01    # it should not show any error in this log
+
+
+curl http://localhost:8080/T5CloudService/1.0/getStatus
+curl http://172.16.47.67:8080/T5CloudService/1.0/getStatus
+
+
+Abis Master installation completed 
+
+
+
+Abis plugin installation, biosdk server installation
+
+login to 172.16.47.68 
+
+install docker 
+
+sudo su
+
+docker login -u salim.khan@technoforte.co.in https://repo.tech5-sa.com:8443/
+password- $@L!m%$#$%^&
+
+docker pull repo.tech5-sa.com:8443/biosdk:6.3.4.1
+
+create directory /opt/Tech5/T5-BIOSDK
+
+docker run -d -p 8080:9977 --restart always -v /opt/Tech5/T5-BIOSDK:/TECH5 \
+--name biosdk -e LICENSE_TOKEN=47D2B4C6BEA3068DC5C147580704C44CD4718CCB06500F36A59F5729FA3C77A4 \
+repo.tech5-sa.com:8443/biosdk:6.3.4.1
+
+docker create --name temp-biosdk repo.tech5-sa.com:8443/biosdk:6.3.4.1
+
+docker cp temp-biosdk:/TECH5 .
+
+ping license.tech5-sa.com
+
+docker run -d -p 9090:9977 -u root --restart always --name biosdk -e LICENSE_TOKEN=47D2B4C6BEA3068DC5C147580704C44CD4718CCB06500F36A59F5729FA3C77A4 repo.tech5-sa.com:8443/biosdk:6.3.4.1
+
+curl --location --request POST 'http://localhost:9090/api/init' --header 'Accept: */*' --header 'Content-Type: application/json' --data '{"version": "0.9", "request": "ewogICJhaS50ZWNoNS5iaW9zZGsucHJvdmlkZXIuZ2VuZXJhbC5sb2FkLmZhY2VTZGsiOiAidHJ1ZSIsCiAgImFpLnRlY2g1LmJpb3Nkay5wcm92aWRlci5nZW5lcmFsLmxvYWQuZmluZ2VyU2RrIjogInRydWUiLAogICJhaS50ZWNoNS5iaW9zZGsucHJvdmlkZXIuZ2VuZXJhbC5sb2FkLmlyaXNTZGsiOiAidHJ1ZSIKfQ=="}'
+
+need to create 2 dir inside /opt/Tech5/
+as T5-BIOSDK , T5-PLUGIN
+
+docker pull repo.tech5-sa.com:8443/plugin:4.2.0_b3
+
+create docker-compose.yaml inside Tech5/
+
+services:
+  adjudicate:
+    image: repo.tech5-sa.com:8443/plugin:4.2.0_b3
+    restart: always
+    ports:
+      - "7070:7070"
+    volumes:
+      - ./adjudication/application.properties:/TECH5/application.properties
+ 
+  plugin:
+    image: repo.tech5-sa.com:8443/plugin:4.2.0_b3
+    restart: always
+    volumes:
+      - ./plugin/application.properties:/TECH5/application.properties
+      - ./plugin/logs:/TECH5/logs
+
+
+docker create --name temp-plugin repo.tech5-sa.com:8443/plugin:4.2.0_b3
+docker cp temp-plugin:/TECH5/application.properties .
+cp  application.properties adjudication/
+cp  application.properties plugin/
+
+
+inside adjudication application.properties 
+ADJUDICATE='--spring.jms.listener.auto-startup=false'   and it should be true in plugin.
+
+
+ curl http://172.16.47.68:8080/T5CloudService/1.0/getStatus
+
+docker compose up -d
+
+docker compose logs -f plugin
+
+
+
+MA Download link: https://drive.tech5.tech/s/soyaaAMsssPfqqF
+Password: kAfa3xQdRa
+
+download and install the above file
+DX.MOSIP.BAdjudicate.exe.config  edit this file just giving the url, license token.
+
+https://learn.microsoft.com/en-us/cpp/windows/latest-supported-vc-redist?view=msvc-170
+download x64
+
+MA Application
+User: admin
+Password: admin123
+
+

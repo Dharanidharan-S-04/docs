@@ -1,0 +1,121 @@
+--after creating vm
+
+adduser --gecos "OpenCRVS Provisioning user" --disabled-password provision
+
+usermod -aG sudo provision
+
+echo 'provision ALL=(ALL) NOPASSWD:ALL' | sudo tee -a /etc/sudoers
+
+su provision
+
+
+Create SSH keys for provision:
+
+
+mkdir -p /home/provision/.ssh
+
+ssh-keygen -f /tmp/ssh-key -N ""
+
+cat /tmp/ssh-key.pub >> /home/provision/.ssh/authorized_keys
+
+chmod 600 /home/provision/.ssh/authorized_keys
+
+echo -e "\n\nThis is the SSH_KEY you add to Github Environments:\n\n"
+
+cat /tmp/ssh-key
+
+rm /tmp/ssh-key*
+
+---
+
+
+known host will be inside infastructure
+
+
+user name, hostname , public ip  in GitHub
+
+add 5 lines in dockerCompose under infrastructure
+
+
+.env.qa file contain all the secrets 
+
+
+povisioning of env
+---
+install yarn if not present in ur system.
+
+yarn environment:init 
+ ->before this create dns record in aws for that use public ip
+and one more record as while card like *.opencrvs-uganda-qa.idencode.link
+
+
+sentry -> no
+
+need to create smtp
+
+after this env will created in GitHub
+
+
+known-host file will have the entry copy the latest enty select branch infrastructure and update the latest entry in that known-host file
+
+run the actions in provision -> select all
+
+then run publish image to dockerhub
+in that notedown the tag 
+
+then run deploy(develop) select the env like qa
+select the core dokcerhub tag as v1.6.3
+and paste above tag to country config
+
+after deploy do run the seeding 
+
+
+after restarting the vm disk will unmounted so that time need to run provision workflow with data-partision
+
+
+
+
+docker.elastic.co/kibana/kibana:8.14.3                
+docker.elastic.co/beats/metricbeat:8.14.3             
+docker.elastic.co/beats/filebeat:8.14.3               
+docker.elastic.co/apm/apm-server:8.14.3               
+docker.elastic.co/elasticsearch/elasticsearch:8.14.3 
+docker.elastic.co/apm/apm-server:7.17.22   
+
+the above 6 images should be present if it take too much time to pull need to login the vm and download it manually and rerun the deploy action
+note: need to comment the line docker prune in the deploy.yaml
+
+
+
+
+
+
+
+
+hostname:
+
+dockerCompose.yaml,
+deployment-production.yaml,
+login-config-prod.js
+
+
+for vpn:
+https://documentation.opencrvs.org/setup/3.-installation/3.3-set-up-a-server-hosted-environment/4.3.4-create-a-github-environment/4.3.4.2-vpn-recipes
+
+
+
+Staging env:
+vpn:
+need to add secrets regarding vpn
+
+certificate:
+ssl or letsencript :
+create cert file and provide the location
+
+dns:
+need to check it is whilecard like * or separate
+
+for react:
+clent-config.prod.js
+login-config.prod.js
+

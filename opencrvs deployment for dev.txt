@@ -1,0 +1,68 @@
+opencrvs deployment for dev 
+
+ssh dharani@10.3.1.90
+
+ssh dharani@10.3.1.110   -> qa
+
+Preprod IP: 172.16.206.11
+
+
+
+login to provision user 
+cd 
+cd actions-runner 
+./run.sh
+
+go to GitHub 
+
+actions ->publish image to dockerhub
+actions -> deploy (development)
+
+
+
+if need to reset and seed 
+
+actions-> reset environment (dev)
+actions -> seed data (dev)
+
+
+after deployment
+
+docker service scale opencrvs_events=0
+docker service scale opencrvs_events=1
+
+
+
+For qa 
+
+ssh dharani@65.2.152.93
+
+just run that actions and get into the vm then
+ 
+docker service scale opencrvs_events=0
+docker service scale opencrvs_events=1
+
+
+
+deploy mosipApi
+
+go to mosip repo -> action -> build and push -> take the tag
+
+
+72fc8df  -> latest core
+
+
+
+
+172.16.206.11  -> preprod
+
+
+
+ssh -J provision@172.16.118.19 dharani@172.16.106.11 -> prod
+
+Opencrvs prod has 3 VMs
+ 
+Master : 172.16.106.11
+Slave:     172.16.106.12
+Slave:     172.16.106.13
+Backup server: 172.16.106.14
