@@ -1,0 +1,59 @@
+Step 1: Prepare the new node, run this on new nodes
+
+# Update system
+sudo apt update && sudo apt upgrade -y
+
+# Install required packages
+sudo apt install -y curl wget
+
+# Ensure Docker is installed (if using Docker runtime)
+# Or install containerd if using containerd runtime
+
+Step 2: Get the join token from existing cluster  - from existing cluster control-plane
+
+# Get the node token
+sudo cat /var/lib/rancher/rke2/server/node-token
+
+# Get the server URL (control plane endpoint)
+# This is usually https://<control-plane-ip>:9345
+
+
+Step 3: Install RKE2 on the new worker node
+
+# Download and install RKE2
+curl -sfL https://get.rke2.io | sudo sh -
+
+# Create RKE2 config directory
+sudo mkdir -p /etc/rancher/rke2/
+
+# Create worker node config file
+sudo tee /etc/rancher/rke2/config.yaml << EOF
+server: https://<CONTROL_PLANE_IP>:9345    ---- update control plane ip
+token: <TOKEN_FROM_STEP_2>     --- update token
+node-label:
+  - "worker=true"
+
+Step 4: Start RKE2 on the new worker node
+
+# Enable and start rke2-agent service
+sudo systemctl enable rke2-agent.service
+sudo systemctl start rke2-agent.service
+
+# Check status
+sudo systemctl status rke2-agent.service
+
+# Check logs if needed
+sudo journalctl -u rke2-agent -f
+
+
+Step 5: Verify the new node joined - from control plane
+
+# Set up kubectl if not already done
+export KUBECONFIG=/etc/rancher/rke2/rke2.yaml
+
+# Check if new node joined
+kubectl get nodes -o wide
+
+# Check node status
+kubectl describe node <new-node-name>
+
