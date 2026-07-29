@@ -1,0 +1,51 @@
+401 issue fix for openg2p esignet---------------
+
+added 2 scopes in keycloak 
+add_oidc_client
+update_oidc_client
+for eSignet client
+
+
+in eSignet pod
+openssl s_client -connect keycloak.dev.openg2p.test:443 -servername keycloak.dev.openg2p.test </dev/null 2>/dev/null | openssl x509 -outform PEM > /tmp/keycloak-dev.pem
+
+cat /tmp/keycloak-dev.pem
+
+save that cert in local
+in local machine wsl
+
+keytool -importcert -alias keycloak-dev   -file keycloak-dev.pem   -keystore custom-truststore.jks   -storepass changeit -noprompt
+
+cp "/mnt/c/Program Files/Java/jdk-11/lib/security/cacerts" ./custom-truststore.jks
+
+keytool -importcert -alias keycloak-dev \
+e keycloak-dev.pem \
+  -keystore>   -file keycloak-dev.pem \
+>   -keystore custom-truststore.jks \
+epass changeit ->   -storepass changeit -noprompt
+
+
+
+kubectl create secret generic esignet-truststore --from-file=cacerts=custom-truststore.jks -n dev
+
+
+in eSignet deployment yaml
+
+- name: JDK_JAVA_OPTIONS
+              value: '-XX:-UseContainerSupport -Dspring.jmx.enabled=false -Djavax.net.ssl.trustStore=/opt/truststore/cacerts -Djavax.net.ssl.trustStorePassword=changeit'
+
+volumeMounts:
+            - mountPath: /startup.sh
+              name: startup-command
+              subPath: startup.sh
+            - mountPath: /opt/truststore
+              name: truststore-vol
+
+volumes:
+        - configMap:
+            defaultMode: 493
+            name: commons-services-esignet-startup
+          name: startup-command
+        - name: truststore-vol
+          secret:
+            secretName: esignet-truststore
