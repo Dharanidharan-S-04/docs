@@ -115,6 +115,14 @@ Because the issuer and subject are the same, this is the self-signed root CA.
 
 ---
 ```bash
+ keytool -importcert   -trustcacerts   -alias openg2p-local-ca   -file /tmp/openg2p-ca.pem   -keystore /tmp/cacerts   -storepass changeit
+
+ keytool -list   -keystore /tmp/cacerts   -storepass changeit   -alias openg2p-local-ca
+
+ openssl s_client   -connect keycloak.dev.openg2p.test:443   -servername keycloak.dev.openg2p.test   -CAfile /tmp/openg2p-ca.pem   </dev/null
+
+ openssl x509   -in /tmp/openg2p-ca.pem   -noout   -subject   -issuer   -fingerprint   -sha256
+
  kubectl -n dev create secret generic farmer-registry-truststore   --from-file=ca.crt=/tmp/openg2p-ca.pem   --dry-run=client -o yaml |   kubectl apply -f -
 
   kubectl -n dev get secret farmer-registry-truststore
