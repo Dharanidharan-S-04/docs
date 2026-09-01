@@ -114,12 +114,13 @@ SHA256 Fingerprint=
 Because the issuer and subject are the same, this is the self-signed root CA.
 
 ---
-
+```bash
  kubectl -n dev create secret generic farmer-registry-truststore   --from-file=ca.crt=/tmp/openg2p-ca.pem   --dry-run=client -o yaml |   kubectl apply -f -
 
   kubectl -n dev get secret farmer-registry-truststore
 
   kubectl -n dev exec -it deploy/farmer-registry-staff-portal-api -c staff-portal-api --   sh -c 'ls -l /opt/truststore && openssl x509 -in /opt/truststore/ca.crt -noout -subject -issuer -fingerprint -sha256'
+```
 
 # 4. Verify the CA Against the Kubernetes Secret
 
