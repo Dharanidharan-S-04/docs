@@ -1,0 +1,38 @@
+ openssl s_client -connect certify.dev.openg2p.test:443 -servername certify.dev.openg2p.test </dev/null 2>/dev/null | openssl x509 -outform PEM > certify-dev.pem
+ 
+ openssl s_client -connect keycloak.dev.openg2p.test:443 -servername keycloak.dev.openg2p.test </dev/null 2>/dev/null | openssl x509 -outform PEM > keycloak-dev.pem
+ 
+ 
+  keytool -importcert -alias certify-dev \
+  -file certify-dev.pem \
+  -keystore certify-truststore.jks \
+  -storepass changeit -noprompt
+  
+  kubectl create secret generic certify-truststore --from-file=cacerts=certify-truststore.jks -n dev
+  
+  
+  kubectl cp -n dev inji-certify-588856cbcc-j8dbv:/opt/java/openjdk/lib/security/cacerts ./full-cacerts -c inji-certify
+  
+  kubectl run cacerts-grab -n dev --rm -it --restart=Never \
+  --image=injistack/inji-certify-with-plugins:0.14.0 -- sh
+  
+  kubectl cp -n dev cacerts-grab:/opt/java/openjdk/lib/security/cacerts ./full-cacerts
+  
+  keytool -importcert -alias keycloak-dev \
+   -file keycloak-dev.pem \
+    full-cacerts \
+   -keystore full-cacerts \
+   -storepass changeit -noprompt
+   
+   keytool -importcert -alias certify-dev \
+	ull-cacerts \
+	     -file certify-dev.pem \
+	   -keystore full-cacerts \
+	   -storepass changeit -noprompt
+	   
+	   
+ keytool -list -keystore full-cacerts -storepass changeit | grep -c "trustedCertEntry"
+ 
+ kubectl delete secret certify-truststore -n dev
+ 
+ kubectl create secret generic certify-truststore --from-file=cacerts=full-cacerts -n dev
