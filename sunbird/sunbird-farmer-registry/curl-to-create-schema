@@ -1,0 +1,79 @@
+ curl -X POST "http://localhost:3333/credential-schema"   -H "Content-Type: application/json"   -d '{
+       "schema": {
+         "type": "https://w3c-ccg.github.io/vc-json-schemas/",
+         "version": "1.0.0",
+         "name": "Farmer Credential",
+         "author": "did:author:33a91b51-a2c4-4f75-9d2b-56aae51d6da8",
+         "authored": "2026-09-04T00:00:00.000Z",
+         "schema": {
+           "$id": "Farmer-Credential",
+           "type": "object",
+           "$schema": "https://json-schema.org/draft/2019-09/schema",
+           "required": [
+             "farmerId",
+             "name",
+             "country",
+             "region",
+             "district",
+             "village",
+             "primaryCrop",
+             "farmSize",
+             "farmSizeUnit",
+             "farmingType",
+             "landOwnershipType",
+             "registrationDate",
+             "status"
+           ],
+           "properties": {
+             "farmerId": {
+               "type": "string"
+             },
+             "name": {
+               "type": "string"
+             },
+             "country": {
+               "type": "string"
+             },
+             "region": {
+               "type": "string"
+             },
+             "district": {
+               "type": "string"
+             },
+             "village": {
+               "type": "string"
+             },
+             "primaryCrop": {
+               "type": "string"
+             },
+             "farmSize": {
+               "type": "number"
+             },
+             "farmSizeUnit": {
+               "type": "string"
+             },
+             "farmingType": {
+               "type": "string"
+         },
+         "landOwnershipType": {
+           "type": "string"
+         },
+         "registrationDate": {
+           "type": "string"
+         },
+         "status": {
+           "type": "string"
+         },
+         "id": {
+           "type": "string"
+         }
+       },
+       "description": "",
+           "additionalProperties": false
+         }
+       },
+       "tags": [
+         "FarmerCredential"
+       ],
+       "status": "DRAFT"
+     }'
