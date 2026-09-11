@@ -1,1 +1,229 @@
-
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "Institution": {
+      "$ref": "#/definitions/Institution"
+    }
+  },
+  "required": [
+    "Institution"
+  ],
+  "title": "Institution",
+  "definitions": {
+    "Institution": {
+      "$id": "#/properties/Institution",
+      "type": "object",
+      "title": "The Institution Schema",
+      "required": [
+        "name",
+        "institutionType",
+        "registrationNumber",
+        "address",
+        "contact"
+      ],
+      "properties": {
+        "name": {
+          "$id": "#/properties/Institution/properties/name",
+          "type": "string",
+          "title": "Institution Name"
+        },
+        "institutionType": {
+          "$id": "#/properties/Institution/properties/institutionType",
+          "type": "string",
+          "title": "Type of Institution",
+          "enum": [
+            "School",
+            "College",
+            "University",
+            "TrainingCenter",
+            "Other"
+          ]
+        },
+        "registrationNumber": {
+          "$id": "#/properties/Institution/properties/registrationNumber",
+          "type": "string",
+          "title": "Government Registration / Affiliation Number"
+        },
+        "establishedDate": {
+          "$id": "#/properties/Institution/properties/establishedDate",
+          "type": "string",
+          "format": "date",
+          "title": "Date Established"
+        },
+        "affiliationBoard": {
+          "$id": "#/properties/Institution/properties/affiliationBoard",
+          "type": "string",
+          "title": "Affiliating Board / University"
+        },
+        "accreditation": {
+          "$id": "#/properties/Institution/properties/accreditation",
+          "type": "string",
+          "title": "Accreditation Status"
+        },
+        "address": {
+          "$id": "#/properties/Institution/properties/address",
+          "type": "object",
+          "title": "Address",
+          "required": [
+            "addressLine1",
+            "city",
+            "state",
+            "country",
+            "pincode"
+          ],
+          "properties": {
+            "addressLine1": {
+              "type": "string",
+              "title": "Address Line 1"
+            },
+            "addressLine2": {
+              "type": "string",
+              "title": "Address Line 2"
+            },
+            "city": {
+              "type": "string",
+              "title": "City"
+            },
+            "state": {
+              "type": "string",
+              "title": "State"
+            },
+            "country": {
+              "type": "string",
+              "title": "Country"
+            },
+            "pincode": {
+              "type": "string",
+              "title": "Pincode / Postal Code"
+            }
+          }
+        },
+        "contact": {
+          "$id": "#/properties/Institution/properties/contact",
+          "type": "object",
+          "title": "Contact Details",
+          "required": [
+            "email",
+            "phoneNumber"
+          ],
+          "properties": {
+            "email": {
+              "type": "string",
+              "format": "email",
+              "title": "Official Email"
+            },
+            "phoneNumber": {
+              "type": "string",
+              "pattern": "^[0-9]{10}$",
+              "title": "Phone Number"
+            },
+            "website": {
+              "type": "string",
+              "format": "uri",
+              "title": "Website"
+            }
+          }
+        },
+        "headOfInstitution": {
+          "$id": "#/properties/Institution/properties/headOfInstitution",
+          "type": "object",
+          "title": "Head of Institution",
+          "properties": {
+            "name": {
+              "type": "string",
+              "title": "Name"
+            },
+            "designation": {
+              "type": "string",
+              "title": "Designation"
+            },
+            "email": {
+              "type": "string",
+              "format": "email",
+              "title": "Email"
+            },
+            "phoneNumber": {
+              "type": "string",
+              "title": "Phone Number"
+            }
+          }
+        },
+        "programsOffered": {
+          "$id": "#/properties/Institution/properties/programsOffered",
+          "type": "array",
+          "title": "Programs / Courses Offered",
+          "items": {
+            "type": "string"
+          }
+        },
+        "status": {
+          "$id": "#/properties/Institution/properties/status",
+          "type": "string",
+          "title": "Operational Status",
+          "enum": [
+            "Active",
+            "Inactive",
+            "Suspended",
+            "Closed"
+          ],
+          "default": "Active"
+        },
+        "identityDetails": {
+          "$id": "#/properties/Institution/properties/identityDetails",
+          "type": "object",
+          "title": "Digital Identity Details",
+          "properties": {
+            "did": {
+              "type": "string",
+              "title": "Decentralized Identifier"
+            }
+          }
+        }
+      },
+      "_osConfig": {
+        "osComment": [
+          "This section describes about the ownership, indexing and other configuration details of Institution schema",
+          "privateFieldsConfig - fields that should be encrypted at rest / restricted from public discovery",
+          "signedFieldsConfig - fields to be excluded while signing the entity document",
+          "systemFieldsConfig - fields managed internally by the registry (osid, timestamps, etc.)"
+        ],
+        "uniqueIndexFields": [
+          "registrationNumber"
+        ],
+        "systemFields": [
+          "osCreatedAt",
+          "osUpdatedAt",
+          "osCreatedBy",
+          "osUpdatedBy"
+        ],
+        "indexFields": [
+          "name",
+          "institutionType",
+          "registrationNumber",
+          "status"
+        ],
+        "privateFields": [
+          "contact.phoneNumber",
+          "headOfInstitution.phoneNumber",
+          "headOfInstitution.email"
+        ],
+        "signedFields": [],
+        "ownershipAttributes": [
+          {
+            "email": "/headOfInstitution/email",
+            "mobile": "/headOfInstitution/phoneNumber",
+            "userId": "/osOwner"
+          }
+        ],
+        "roles": [
+          "anonymous"
+        ],
+        "inviteRoles": [
+          "anonymous"
+        ],
+        "certificateTemplates": {}
+      }
+    }
+  }
+}
