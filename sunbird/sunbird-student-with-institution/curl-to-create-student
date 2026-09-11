@@ -1,0 +1,106 @@
+curl -X POST "http://localhost:3333/credential-schema"   -H "Content-Type: application/json"   -d '{
+      "schema": {
+        "type": "https://w3c-ccg.github.io/vc-json-schemas/",
+        "id": "did:schema:1-59287550-d29a-46ca-b68a-a4b158e211ad",
+        "version": "1.0.0",
+        "name": "Student Certificate Credential",
+        "author": "did:author:33a91b51-a2c4-4f75-9d2b-56aae51d6da8",
+        "authored": "2026-08-26T00:00:00.000Z",
+        "schema": {
+          "$id": "Student-Certificate-Credential",
+          "type": "object",
+          "$schema": "https://json-schema.org/draft/2019-09/schema",
+          "required": [
+            "institutionId",
+            "validUpto",
+            "dateOfBirth",
+            "osid",
+            "program",
+            "issuedBy",
+            "studentId",
+            "studentName",
+            "institutionName",
+            "grade",
+            "certificateKey",
+            "issueDate",
+            "batchYear",
+            "certificateType",
+            "status"
+          ],
+          "properties": {
+            "institutionId": {
+              "type": "string"
+            },
+            "validUpto": {
+              "type": "string"
+            },
+            "dateOfBirth": {
+              "type": "string"
+            },
+            "osid": {
+              "type": "string"
+            },
+            "program": {
+              "type": "string"
+            },
+            "issuedBy": {
+              "type": "object",
+              "required": [
+                "osid",
+                "signature",
+                "name",
+                "designation"
+              ],
+              "properties": {
+                "osid": {
+                  "type": "string"
+                },
+                "signature": {
+                  "type": "string"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "designation": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "studentId": {
+              "type": "string"
+            },
+            "studentName": {
+              "type": "string"
+            },
+            "institutionName": {
+              "type": "string"
+            },
+            "grade": {
+              "type": "string"
+            },
+            "certificateKey": {
+              "type": "string"
+            },
+            "issueDate": {
+              "type": "string"
+            },
+            "batchYear": {
+              "type": "string"
+            },
+            "certificateType": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string"
+            }
+          },
+          "description": "",
+          "additionalProperties": false
+        }
+      },
+      "tags": [
+        "StudentCertificate"
+      ],
+      "status": "DRAFT"
+    }'
