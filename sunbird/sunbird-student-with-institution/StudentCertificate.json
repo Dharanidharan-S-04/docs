@@ -1,0 +1,196 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "StudentCertificate": {
+      "$ref": "#/definitions/StudentCertificate"
+    }
+  },
+  "required": [
+    "StudentCertificate"
+  ],
+  "title": "StudentCertificate",
+  "definitions": {
+    "StudentCertificate": {
+      "$id": "#/properties/StudentCertificate",
+      "type": "object",
+      "title": "The StudentCertificate Schema",
+      "required": [
+        "studentName",
+        "studentId",
+        "institutionId",
+        "institutionName",
+        "program",
+        "certificateType",
+        "issueDate"
+      ],
+      "properties": {
+        "studentName": {
+          "$id": "#/properties/StudentCertificate/properties/studentName",
+          "type": "string",
+          "title": "Student Name"
+        },
+        "studentId": {
+          "$id": "#/properties/StudentCertificate/properties/studentId",
+          "type": "string",
+          "title": "Student Enrollment / Roll Number"
+        },
+        "dateOfBirth": {
+          "$id": "#/properties/StudentCertificate/properties/dateOfBirth",
+          "type": "string",
+          "format": "date",
+          "title": "Date of Birth"
+        },
+        "institutionId": {
+          "$id": "#/properties/StudentCertificate/properties/institutionId",
+          "type": "string",
+          "title": "Institution osid (reference to Institution registry)"
+        },
+        "institutionName": {
+          "$id": "#/properties/StudentCertificate/properties/institutionName",
+          "type": "string",
+          "title": "Institution Name"
+        },
+        "program": {
+          "$id": "#/properties/StudentCertificate/properties/program",
+          "type": "string",
+          "title": "Program / Course Enrolled"
+        },
+        "batchYear": {
+          "$id": "#/properties/StudentCertificate/properties/batchYear",
+          "type": "string",
+          "title": "Batch / Academic Year"
+        },
+        "certificateType": {
+          "$id": "#/properties/StudentCertificate/properties/certificateType",
+          "type": "string",
+          "title": "Type of Certificate",
+          "enum": [
+            "BonafideCertificate",
+            "ProvisionalCertificate",
+            "TransferCertificate",
+            "DegreeCertificate",
+            "MarksheetCertificate",
+            "CourseCompletionCertificate"
+          ]
+        },
+        "grade": {
+          "$id": "#/properties/StudentCertificate/properties/grade",
+          "type": "string",
+          "title": "Grade / CGPA / Percentage"
+        },
+        "issueDate": {
+          "$id": "#/properties/StudentCertificate/properties/issueDate",
+          "type": "string",
+          "format": "date",
+          "title": "Date of Issue"
+        },
+        "validUpto": {
+          "$id": "#/properties/StudentCertificate/properties/validUpto",
+          "type": "string",
+          "format": "date",
+          "title": "Valid Upto (if applicable)"
+        },
+        "issuerName": {
+          "$id": "#/properties/StudentCertificate/properties/issuerName",
+          "type": "string",
+          "title": "Issuer Name"
+        },
+        "issuerDesignation": {
+          "$id": "#/properties/StudentCertificate/properties/issuerDesignation",
+          "type": "string",
+          "title": "Issuer Designation"
+        },
+        "issuerSignature": {
+          "$id": "#/properties/StudentCertificate/properties/issuerSignature",
+          "type": "string",
+          "title": "Issuer Signature (image URL or base64)"
+        },
+        "status": {
+          "$id": "#/properties/StudentCertificate/properties/status",
+          "type": "string",
+          "title": "Certificate Status",
+          "enum": [
+            "Active",
+            "Revoked",
+            "Expired"
+          ],
+          "default": "Active"
+        }
+      },
+      "_osConfig": {
+        "attestationPolicies": [
+                        {
+                          "name": "institutionValidation",
+                          "attestationProperties": {
+                                "institutionId": "$.institutionId",
+                                "institutionName": "$.institutionName"
+                          },
+                          "type": "MANUAL",
+                          "attestorPlugin": "did:internal:ClaimPluginActor?entity=Institution",
+                          "conditions": "(ATTESTOR#$.osid#.equals(REQUESTER#$.institutionId#)) && (ATTESTOR#$.name#.equals(REQUESTER#$.institutionName#))"
+                        }
+        ],
+        "osComment": [
+          "This section describes about the ownership, indexing and credential configuration for the StudentCertificate schema",
+          "institutionId links back to an entity osid in the Institution registry",
+          "credentialTemplate defines the VC template used when issuing this certificate as a Verifiable Credential"
+        ],
+        "uniqueIndexFields": [
+          "studentId",
+          "certificateType",
+          "institutionId"
+       ],
+        "systemFields": [
+          "osCreatedAt",
+          "osUpdatedAt",
+          "osCreatedBy",
+          "osUpdatedBy"
+        ],
+        "indexFields": [
+          "studentName",
+          "studentId",
+          "institutionId",
+          "certificateType",
+          "status"
+        ],
+        "privateFields": [
+          "dateOfBirth"
+        ],
+        "signedFields": [],
+        "ownershipAttributes": [],
+        "roles": [
+          "anonymous"
+        ],
+        "inviteRoles": [
+          "anonymous"
+        ],
+        "certificateTemplates": {
+          "svg": "https://raw.githubusercontent.com/dileepbapat/ref-sunbirdrc-certificate/main/schemas/templates/TrainingCertificate.svg"
+        },
+        "credentialTemplate": {
+          "@context": [
+            "https://www.w3.org/2018/credentials/v1",
+            "https://gist.githubusercontent.com/sunbirdrc/studentcertificate-context/raw/context.json"
+          ],
+          "type": [
+            "VerifiableCredential",
+            "StudentCertificate"
+          ],
+          "issuer": "did:web:institution.example.org",
+          "issuanceDate": "/issueDate",
+          "credentialSubject": {
+            "type": "StudentCertificate",
+            "name": "/studentName",
+            "studentId": "/studentId",
+            "institutionName": "/institutionName",
+            "program": "/program",
+            "certificateType": "/certificateType",
+            "grade": "/grade",
+            "issueDate": "/issueDate"
+          }
+        }
+      }
+    }
+  }
+}
