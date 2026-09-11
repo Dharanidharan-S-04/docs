@@ -1,0 +1,254 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "Farmer": {
+      "$ref": "#/definitions/Farmer"
+    }
+  },
+  "required": [
+    "Farmer"
+  ],
+  "title": "Farmer",
+  "definitions": {
+    "Farmer": {
+      "$id": "#/properties/Farmer",
+      "type": "object",
+      "title": "The Farmer Schema",
+      "required": [
+        "farmerId",
+        "name",
+        "dateOfBirth",
+        "gender",
+        "country",
+        "region",
+        "farmDetails",
+        "status",
+        "phoneNumber",
+        "email"
+      ],
+      "properties": {
+        "farmerId": {
+          "$id": "#/properties/Farmer/properties/farmerId",
+          "type": "string",
+          "title": "Farmer National / Local ID"
+        },
+        "name": {
+          "$id": "#/properties/Farmer/properties/name",
+          "type": "string",
+          "title": "Full Name"
+        },
+        "dateOfBirth": {
+          "$id": "#/properties/Farmer/properties/dateOfBirth",
+          "type": "string",
+          "format": "date",
+          "title": "Date of Birth"
+        },
+        "phoneNumber": {
+          "$id": "#/properties/Farmer/properties/phoneNumber",
+          "type": "string",
+          "title": "Phone Number"
+        },
+        "email": {
+          "$id": "#/properties/Farmer/properties/email",
+          "type": "string",
+          "title": "Email Address"
+        },
+        "gender": {
+          "$id": "#/properties/Farmer/properties/gender",
+          "type": "string",
+          "title": "Gender",
+          "enum": [
+            "Male",
+            "Female",
+            "Other",
+            "PreferNotToSay"
+          ]
+        },
+        "country": {
+          "$id": "#/properties/Farmer/properties/country",
+          "type": "string",
+          "title": "Country"
+        },
+        "region": {
+          "$id": "#/properties/Farmer/properties/region",
+          "type": "string",
+          "title": "State / Province / Region"
+        },
+        "district": {
+          "$id": "#/properties/Farmer/properties/district",
+          "type": "string",
+          "title": "District / County"
+        },
+        "village": {
+          "$id": "#/properties/Farmer/properties/village",
+          "type": "string",
+          "title": "Village / Locality"
+        },
+        "address": {
+          "$id": "#/properties/Farmer/properties/address",
+          "type": "object",
+          "title": "Address",
+          "properties": {
+            "addressLine1": {
+              "type": "string",
+              "title": "Address Line 1"
+            },
+            "pincode": {
+              "type": "string",
+              "title": "Pincode / Postal Code"
+            }
+          }
+        },
+        "farmDetails": {
+          "$id": "#/properties/Farmer/properties/farmDetails",
+          "type": "object",
+          "title": "Farm Details",
+          "required": [
+            "farmSize",
+            "farmSizeUnit",
+            "primaryCrop",
+            "landOwnershipType"
+          ],
+          "properties": {
+            "farmSize": {
+              "type": "number",
+              "title": "Farm Size"
+            },
+            "farmSizeUnit": {
+              "type": "string",
+              "title": "Unit",
+              "enum": [
+                "Acres",
+                "Hectares",
+                "Bigha",
+                "SquareMeters"
+              ]
+            },
+            "primaryCrop": {
+              "type": "string",
+              "title": "Primary Crop"
+            },
+            "secondaryCrops": {
+              "type": "array",
+              "title": "Other Crops Grown",
+              "items": {
+                "type": "string"
+              }
+            },
+            "farmingType": {
+              "type": "string",
+              "title": "Farming Type",
+              "enum": [
+                "Organic",
+                "Conventional",
+                "Mixed",
+                "Hydroponic",
+                "Other"
+              ]
+            },
+            "landOwnershipType": {
+              "type": "string",
+              "title": "Land Ownership",
+              "enum": [
+                "Owned",
+                "Leased",
+                "Shared",
+                "Tenant"
+              ]
+            },
+            "irrigationSource": {
+              "type": "string",
+              "title": "Irrigation Source",
+              "enum": [
+                "RainFed",
+                "Canal",
+                "BoreWell",
+                "OpenWell",
+                "Drip",
+                "Other"
+              ]
+            }
+          }
+        },
+        "governmentSchemes": {
+          "$id": "#/properties/Farmer/properties/governmentSchemes",
+          "type": "array",
+          "title": "Enrolled Government Schemes / Subsidies",
+          "items": {
+            "type": "string"
+          }
+        },
+        "registrationDate": {
+          "$id": "#/properties/Farmer/properties/registrationDate",
+          "type": "string",
+          "format": "date",
+          "title": "Date of Registration"
+        },
+        "status": {
+          "$id": "#/properties/Farmer/properties/status",
+          "type": "string",
+          "title": "Registration Status",
+          "enum": [
+            "Active",
+            "Inactive",
+            "Suspended",
+            "PendingVerification"
+          ],
+          "default": "PendingVerification"
+        },
+        "farmerKey": {
+          "$id": "#/properties/Farmer/properties/farmerKey",
+          "type": "string",
+          "title": "Composite Uniqueness Key (auto-derived: farmerId-country). Set at request time - do not leave blank."
+        }
+      },
+      "_osConfig": {
+        "osComment": [
+          "This section describes the ownership, indexing and other configuration details of the Farmer schema",
+          "farmerKey enforces true uniqueness of farmerId scoped per country, since farmer IDs are typically only unique within a single country's system",
+          "governmentSchemes is a flexible list since scheme names vary widely by country/region"
+        ],
+        "uniqueIndexFields": [
+          "farmerKey"
+        ],
+        "systemFields": [
+          "osCreatedAt",
+          "osUpdatedAt",
+          "osCreatedBy",
+          "osUpdatedBy"
+        ],
+        "indexFields": [
+          "farmerId",
+          "name",
+          "country",
+          "region",
+          "status",
+          "district",
+          "village",
+          "phoneNumber"
+        ],
+        "privateFields": [
+          "dateOfBirth",
+          "phoneNumber",
+          "address"
+        ],
+        "signedFields": [],
+        "ownershipAttributes": [
+          {
+            "email": "email",
+            "mobile": "phoneNumber",
+            "userId": "/osOwner"
+          }
+        ],
+        "roles": [
+          "anonymous"
+        ],
+        "inviteRoles": [
+          "anonymous"
+        ],
+        "certificateTemplates": {}
+      }
+    }
+  }
+}
