@@ -1,0 +1,374 @@
+INJI deployment 
+Inji stack:
+inji-certify  -> 0.13.0
+Inji Wallet -> 0.20.0
+Inji Web -> 0.14.0 
+inji verify -> 0.16.0
+mimoto ->0.18.1
+
+
+inji certify :
+db init, install.sh
+after installation create misp partner and update it’s misp liscence key in config-server and inji-certify
+
+inji verify:
+db init, install.sh
+
+mimoto:
+db init , partner onboarder, then install.sh
+before running install.sh create google clientid , secret key
+
+https://github.com/inji/mimoto/blob/v0.18.1/docker-compose/README.md#how-to-create-google-client-credentials
+
+with the reference of this need to give url and redirect url
+
+https://injiweb.demo.idencode.link/v1/mimoto/oauth2/callback/google
+redirect url
+
+after partner onboarder run install.sh of mimoto 
+and give the required details
+
+["io.mosip.residentapp.inji:\/\/oauthredirect","https:\/\/injiweb.demo.idencode.link\/redirect"]
+mimoto oidc redirect url. Update this in signet  client_details table.
+
+inji-web:
+install.sh 
+
+
+run this below api to get the issuers credential_configurations_supported
+
+{
+
+  "credentialConfigKeyId": "MosipVerifiableCredential",
+ 
+  "credentialFormat": "ldp_vc",
+ 
+  "scope": "mosip_identity_vc_ldp",
+ 
+  "contextURLs": [
+
+    "https://www.w3.org/2018/credentials/v1"
+
+  ],
+ 
+  "credentialTypes": [
+
+    "VerifiableCredential",
+
+    "MOSIPVerifiableCredential"
+
+  ],
+ 
+  "didUrl": "did:web:injicertify.demo.idencode.link",
+ 
+  "signatureCryptoSuite": "RsaSignature2018",
+ 
+  "signatureAlgo": "RS256",
+ 
+  "keyManagerAppId": "CERTIFY_VC_SIGN_RSA",
+ 
+  "keyManagerRefId": "RSA_SIGN",
+ 
+  "credentialSubjectDefinition": {
+
+    "fullName": {
+
+      "display": [
+
+        {
+
+          "name": "Full Name",
+
+          "locale": "en"
+
+        }
+
+      ]
+
+    },
+
+    "phone": {
+
+      "display": [
+
+        {
+
+          "name": "Phone Number",
+
+          "locale": "en"
+
+        }
+
+      ]
+
+    },
+
+    "dateOfBirth": {
+
+      "display": [
+
+        {
+
+          "name": "DOB",
+
+          "locale": "en"
+
+        }
+
+      ]
+
+    },
+
+    "gender": {
+
+      "display": [
+
+        {
+
+          "name": "Gender",
+
+          "locale": "en"
+
+        }
+
+      ]
+
+    },
+
+    "residenceStatus": {
+
+      "display": [
+
+        {
+
+          "name": "Residence Status",
+
+          "locale": "en"
+
+        }
+
+      ]
+
+    },
+
+    "email": {
+
+      "display": [
+
+        {
+
+          "name": "Email Id",
+
+          "locale": "en"
+
+        }
+
+      ]
+
+    },
+
+    "region": {
+
+      "display": [
+
+        {
+
+          "name": "Region",
+
+          "locale": "en"
+
+        }
+
+      ]
+
+    },
+
+    "province": {
+
+      "display": [
+
+        {
+
+          "name": "Province",
+
+          "locale": "en"
+
+        }
+
+      ]
+
+    },
+
+    "city": {
+
+      "display": [
+
+        {
+
+          "name": "City",
+
+          "locale": "en"
+
+        }
+
+      ]
+
+    },
+
+    "UIN": {
+
+      "display": [
+
+        {
+
+          "name": "UIN",
+
+          "locale": "en"
+
+        }
+
+      ]
+
+    },
+
+    "VID": {
+
+      "display": [
+
+        {
+
+          "name": "VID",
+
+          "locale": "en"
+
+        }
+
+      ]
+
+    },
+
+    "postalCode": {
+
+      "display": [
+
+        {
+
+          "name": "Postal Code",
+
+          "locale": "en"
+
+        }
+
+      ]
+
+    }
+
+  },
+ 
+  "displayOrder": [
+
+    "fullName",
+
+    "phone",
+
+    "dateOfBirth",
+
+    "gender",
+
+    "residenceStatus",
+
+    "email",
+
+    "region",
+
+    "province",
+
+    "city",
+
+    "UIN",
+
+    "VID",
+
+    "postalCode"
+
+  ],
+ 
+  "metaDataDisplay": [
+
+    {
+
+      "name": "MOSIP National ID",
+
+      "locale": "en",
+ 
+      "logo": {
+
+        "url": "https://injicertify.demo.idencode.link/inji/mosip-logo.png",
+
+        "alt_text": "MOSIP National ID Logo"
+
+      },
+ 
+      "background_color": "#f8efea",
+ 
+      "background_image": {
+
+        "uri": "https://injicertify.demo.idencode.link/inji/mosip-logo.png"
+
+      },
+ 
+      "text_color": "#000000"
+
+    }
+
+  ]
+
+}
+ 
+ 
+ https://injicertify.demo.idencode.link/v1/certify/credential-configurations/MosipVerifiableCredential
+ 
+ post method to add the issuer in certify db
+
+
+
+create oidckeystore.p12
+1. Create the keystore with a key pair
+bash
+mkdir certs && cd certs
+keytool -genkeypair -alias mpartner-default-mimoto-insurance-oidc -keyalg RSA -keysize 2048 -sigalg SHA256withRSA -validity 3650 -storetype PKCS12 -keystore oidckeystore.p12 -storepass mosip123 -keypass mosip123 -dname "CN=mimoto-insurance-oidc, O=YourOrg, C=IN"
+
+ls
+oidckeystore.p12
+
+keytool -exportcert -rfc -alias mpartner-default-mimotooidc \
+  -keystore oidckeystore.p12 -storepass mosip123 -file oidc-cert.pem
+
+N=$(openssl x509 -in oidc-cert.pem -noout -modulus | cut -d= -f2 \
+    | xxd -r -p | base64 -w0 | tr '+/' '-_' | tr -d '=')
+
+cat > oidc-public-jwk.json <<EOF
+{
+  "e": "AQAB",
+  "n": "$N",
+  "alg": "RS256",
+  "kid": "",
+  "kty": "RSA",
+  "use": "sig"
+}
+EOF
+
+keytool -list -keystore oidckeystore.p12 -storepass mosip123
+It should show one entry: mpartner-default-mimotooidc, PrivateKeyEntry.
+
+kubectl create secret generic mimotooidc \
+  --from-file=oidckeystore.p12=./oidckeystore.p12 \
+  -n injiweb --dry-run=client -o yaml | kubectl apply -f -
+. Configure Mimoto and restart
+•	client_alias in mimoto-issuers-config.json is mpartner-default-mimotooidc
+•	client_id is the clientId from step 4
+•	oidc_p12_password is mosip123
+
+kubectl rollout restart deployment/mimoto -n injiweb
+kubectl exec -n injiweb deploy/mimoto -- keytool -list -keystore certs/oidckeystore.p12 -storepass mosip123
+
