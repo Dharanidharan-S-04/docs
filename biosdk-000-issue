@@ -1,0 +1,5 @@
+biosdk liscence not exired server restarted after that getting the below error 
+OmniMatch SDK License Expiration Date : dd/MM/yyyy :0/0/0
+
+for this inside biosdk container just renaming this t5omnimatch_sdk.lic file to t5omnimatch_sdk.lic_bkp and restart the container
+it will create t5omnimatch_sdk.lic automatically then it will work 
