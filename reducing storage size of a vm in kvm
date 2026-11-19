@@ -1,0 +1,84 @@
+Here is the complete, correct sequence to type inside virt-rescue, using the real values from your clone (disk /dev/sda, LVM on sda5, VG vglocalhost, swap UUID from your blkid).
+
+Before opening virt-rescue (host)
+sudo virsh destroy auto-ranv3Node1
+sudo qemu-img info -U /mnt/SSD/auto-ranv3Node1.qcow2
+sudo virt-rescue -a /mnt/SSD/auto-ranv3Node1.qcow2
+
+Confirm there is no backing file: line, and that you opened the clone’s file, not the base.
+
+Inside virt-rescue (the ><rescue> prompt)
+
+1. Check the layout
+
+vgchange -ay
+lvs
+parted /dev/sda unit GiB print
+blkid /dev/vglocalhost/swap_1
+
+Expect sda5 (lvm) starting at 0.50GiB, root ~264g, swap_1 976m, swap UUID c2e6f0a0-1ba0-4e68-bdad-0037f1b24da2.
+
+2. Remove swap (answer y)
+
+lvremove /dev/vglocalhost/swap_1
+
+3. Check the filesystem, then shrink root and its filesystem together
+
+e2fsck -f /dev/vglocalhost/root
+lvreduce -r -L 40G /dev/vglocalhost/root
+
+If e2fsck asks to fix free-count mismatches, answer y.
+
+4. Shrink the physical volume (answer y)
+
+pvresize --setphysicalvolumesize 46G /dev/sda5
+
+5. Shrink the partitions (logical sda5 first, then the extended sda2; answer Yes to any warning)
+
+parted /dev/sda resizepart 5 48GiB
+parted /dev/sda resizepart 2 48GiB
+
+6. Recreate swap with the original UUID
+
+lvcreate -L 976M -n swap_1 vglocalhost
+mkswap -U c2e6f0a0-1ba0-4e68-bdad-0037f1b24da2 /dev/vglocalhost/swap_1
+
+7. Verify before leaving
+
+vgs; lvs
+parted /dev/sda unit GiB print
+
+You should see:
+
+vgs: VG under 46G
+lvs: root 40G, swap_1 976M
+parted: sda2 and sda5 both ending at 48.0GiB
+
+8. Leave the shell
+
+exit
+Back on the host (last step)
+sudo qemu-img resize --shrink /mnt/SSD/auto-ranv3Node1.qcow2 50G
+sudo qemu-img info -U /mnt/SSD/auto-ranv3Node1.qcow2
+sudo virsh start auto-ranv3Node1
+
+Virtual size should show 50 GiB.
+
+Verify inside the VM
+df -h /
+lsblk
+free -h
+
+Expect root about 39G, vda 50G, swap 976M.
+
+Notes
+Your earlier session already did steps 2 to 6 on this clone. If you are continuing from that, go straight to step 7, then exit, then the host commands.
+Do not run qemu-img resize --shrink until parted shows both partitions ending at 48.0GiB.
+The “cannot find name for group ID 0” line when virt-rescue starts is harmless.
+
+
+
+
+
+in dean claud account pinned
+https://claude.ai/share/51e3dbdc-325c-47fd-8dc0-c5beb190bb81
